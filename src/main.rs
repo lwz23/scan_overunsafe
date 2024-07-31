@@ -2,6 +2,41 @@ use regex::Regex;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use anyhow::Result;
+use syn::{ItemFn, ItemImpl, ImplItem, ImplItemFn, visit::{self, Visit}, parse_file};
+use quote::quote;
+
+struct FunctionVisitor {
+    target_fn_name: String,
+    found: bool,
+}
+
+impl<'ast> Visit<'ast> for FunctionVisitor {
+    fn visit_item_fn(&mut self, node: &'ast ItemFn) {
+        if node.sig.ident == self.target_fn_name {
+            self.found = true;
+            let function_code = quote! {
+                #node
+            };
+            println!("{}", function_code);
+        }
+    }
+
+    fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
+        for item in &node.items {
+            if let ImplItem::Fn(method) = item {
+                if method.sig.ident == self.target_fn_name {
+                    self.found = true;
+                    let method_code = quote! {
+                        #method
+                    };
+                    println!("{}", method_code);
+                }
+            }
+        }
+        // Visit child nodes
+        visit::visit_item_impl(self, node);
+    }
+}
 
 fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Regex) -> Result<()> {
     let file = File::open(file_path)?;
@@ -32,6 +67,16 @@ fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Rege
                 if unsafe_block_lines.len() > 5 {
                     println!("File: {}", file_path);
                     println!("Function: {}", current_function);
+                    
+                    let source_code = fs::read_to_string(file_path).expect("Failed to read file");
+                    let parsed_file = parse_file(&source_code).expect("Failed to parse file");
+                
+                    let mut visitor = FunctionVisitor {
+                        target_fn_name: current_function.to_string(),
+                        found: false,
+                    };
+                    visitor.visit_file(&parsed_file);
+
                     println!("Starting line: {}", unsafe_block_lines[0].0);
                     println!("Content:");
                     for (_, ref line_content) in &unsafe_block_lines {
