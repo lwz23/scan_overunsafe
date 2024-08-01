@@ -1,35 +1,39 @@
 use regex::Regex;
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use anyhow::Result;
 use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file, Attribute};
 use quote::quote;
 
-struct FunctionVisitor {
-    target_fn_name: String,
+struct FunctionVisitor<'a> {
+    target_fn_name: &'a str,
     found: bool,
+    outputted_functions: &'a mut HashSet<String>,
 }
 
-impl<'ast> Visit<'ast> for FunctionVisitor {
+impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
     fn visit_item_fn(&mut self, node: &'ast ItemFn) {
-        if node.sig.ident == self.target_fn_name && !self.is_test_function(&node.attrs) {
+        if node.sig.ident == self.target_fn_name && !self.is_test_function(&node.attrs) && !self.outputted_functions.contains(self.target_fn_name) {
             let function_code = quote! {
                 #node
             };
             let formatted_code = prettyplease::unparse(&syn::parse_quote!(#function_code));
             println!("{}", formatted_code);
+            self.outputted_functions.insert(self.target_fn_name.to_string());
         }
     }
 
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
         for item in &node.items {
             if let ImplItem::Fn(method) = item {
-                if method.sig.ident == self.target_fn_name && !self.is_test_function(&method.attrs) {
+                if method.sig.ident == self.target_fn_name && !self.is_test_function(&method.attrs) && !self.outputted_functions.contains(self.target_fn_name) {
                     let method_code = quote! {
                         #method
                     };
                     let formatted_code = prettyplease::unparse(&syn::parse_quote!(#method_code));
                     println!("{}", formatted_code);
+                    self.outputted_functions.insert(self.target_fn_name.to_string());
                 }
             }
         }
@@ -38,13 +42,13 @@ impl<'ast> Visit<'ast> for FunctionVisitor {
     }
 }
 
-impl FunctionVisitor {
+impl<'a> FunctionVisitor<'a> {
     fn is_test_function(&self, attrs: &[Attribute]) -> bool {
         attrs.iter().any(|attr| attr.path().is_ident("test"))
     }
 }
 
-fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Regex) -> Result<()> {
+fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Regex, outputted_functions: &mut HashSet<String>) -> Result<()> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
 
@@ -79,8 +83,9 @@ fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Rege
                     let parsed_file = parse_file(&source_code).expect("Failed to parse file");
 
                     let mut visitor = FunctionVisitor {
-                        target_fn_name: current_function.to_string(),
+                        target_fn_name: &current_function,
                         found: false,
+                        outputted_functions,
                     };
                     visitor.visit_file(&parsed_file);
 
@@ -99,15 +104,15 @@ fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Rege
     Ok(())
 }
 
-fn process_directory(dir_path: &str, unsafe_re: &Regex, function_re: &Regex) -> Result<()> {
+fn process_directory(dir_path: &str, unsafe_re: &Regex, function_re: &Regex, outputted_functions: &mut HashSet<String>) -> Result<()> {
     for entry in fs::read_dir(dir_path)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir() {
-            process_directory(path.to_str().unwrap(), unsafe_re, function_re)?;
+            process_directory(path.to_str().unwrap(), unsafe_re, function_re, outputted_functions)?;
         } else if path.extension().map_or(false, |ext| ext == "rs") {
             println!("Processing file: {}", path.display());
-            scan_for_unsafe_blocks(path.to_str().unwrap(), unsafe_re, function_re)?;
+            scan_for_unsafe_blocks(path.to_str().unwrap(), unsafe_re, function_re, outputted_functions)?;
         }
     }
     Ok(())
@@ -119,7 +124,8 @@ fn main() -> Result<()> {
     let unsafe_re = Regex::new(r"^\s*unsafe\s*\{")?;
     let function_re = Regex::new(r"^\s*(?:pub\s+)?(?:fn|impl)\s+(\w+)")?;
     
-    process_directory(crate_dir, &unsafe_re, &function_re)?;
+    let mut outputted_functions = HashSet::new();
+    process_directory(crate_dir, &unsafe_re, &function_re, &mut outputted_functions)?;
 
     Ok(())
 }
