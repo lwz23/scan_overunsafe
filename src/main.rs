@@ -2,7 +2,7 @@ use regex::Regex;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use anyhow::Result;
-use syn::{ItemFn, ItemImpl, ImplItem, ImplItemFn, visit::{self, Visit}, parse_file};
+use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file};
 use quote::quote;
 
 struct FunctionVisitor {
@@ -17,7 +17,8 @@ impl<'ast> Visit<'ast> for FunctionVisitor {
             let function_code = quote! {
                 #node
             };
-            println!("{}", function_code);
+            let formatted_code = prettyplease::unparse(&syn::parse_quote!(#function_code));
+            println!("{}", formatted_code);
         }
     }
 
@@ -29,7 +30,8 @@ impl<'ast> Visit<'ast> for FunctionVisitor {
                     let method_code = quote! {
                         #method
                     };
-                    println!("{}", method_code);
+                    let formatted_code = prettyplease::unparse(&syn::parse_quote!(#method_code));
+                    println!("{}", formatted_code);
                 }
             }
         }
@@ -64,7 +66,9 @@ fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Rege
             unsafe_block_lines.push((line_number, line.to_string())); // Clone the line content
             // Check for end of unsafe block
             if line.trim().ends_with('}') {
+                unsafe_block_lines.push((line_number, line.to_string())); // Include end line
                 if unsafe_block_lines.len() > 5 {
+                    println!("-------------------------------------------------------------------------------");
                     println!("File: {}", file_path);
                     println!("Function: {}", current_function);
                     
@@ -77,8 +81,8 @@ fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Rege
                     };
                     visitor.visit_file(&parsed_file);
 
-                    println!("Starting line: {}", unsafe_block_lines[0].0);
-                    println!("Content:");
+                    println!("Unsafe Starting line: {}", unsafe_block_lines[0].0);
+                    println!("Unsafe block content:");
                     for (_, ref line_content) in &unsafe_block_lines {
                         println!("{}", line_content);
                     }
@@ -110,7 +114,7 @@ fn main() -> Result<()> {
     let crate_dir = r"C:\Users\ROG\Desktop\overunsafe库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5"; // Adjust to the directory of your crate
 
     let unsafe_re = Regex::new(r"^\s*unsafe\s*\{")?;
-    let function_re = Regex::new(r"^\s*fn\s+(\w+)")?;
+    let function_re = Regex::new(r"^\s*(?:pub\s+)?(?:fn|impl)\s+(\w+)")?;
     
     process_directory(crate_dir, &unsafe_re, &function_re)?;
 
