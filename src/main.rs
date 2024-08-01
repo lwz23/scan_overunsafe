@@ -2,7 +2,7 @@ use regex::Regex;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use anyhow::Result;
-use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file};
+use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file, Attribute};
 use quote::quote;
 
 struct FunctionVisitor {
@@ -12,8 +12,7 @@ struct FunctionVisitor {
 
 impl<'ast> Visit<'ast> for FunctionVisitor {
     fn visit_item_fn(&mut self, node: &'ast ItemFn) {
-        if node.sig.ident == self.target_fn_name {
-            self.found = true;
+        if node.sig.ident == self.target_fn_name && !self.is_test_function(&node.attrs) {
             let function_code = quote! {
                 #node
             };
@@ -25,8 +24,7 @@ impl<'ast> Visit<'ast> for FunctionVisitor {
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
         for item in &node.items {
             if let ImplItem::Fn(method) = item {
-                if method.sig.ident == self.target_fn_name {
-                    self.found = true;
+                if method.sig.ident == self.target_fn_name && !self.is_test_function(&method.attrs) {
                     let method_code = quote! {
                         #method
                     };
@@ -37,6 +35,12 @@ impl<'ast> Visit<'ast> for FunctionVisitor {
         }
         // Visit child nodes
         visit::visit_item_impl(self, node);
+    }
+}
+
+impl FunctionVisitor {
+    fn is_test_function(&self, attrs: &[Attribute]) -> bool {
+        attrs.iter().any(|attr| attr.path().is_ident("test"))
     }
 }
 
@@ -66,15 +70,14 @@ fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Rege
             unsafe_block_lines.push((line_number, line.to_string())); // Clone the line content
             // Check for end of unsafe block
             if line.trim().ends_with('}') {
-                unsafe_block_lines.push((line_number, line.to_string())); // Include end line
                 if unsafe_block_lines.len() > 5 {
                     println!("-------------------------------------------------------------------------------");
                     println!("File: {}", file_path);
                     println!("Function: {}", current_function);
-                    
+
                     let source_code = fs::read_to_string(file_path).expect("Failed to read file");
                     let parsed_file = parse_file(&source_code).expect("Failed to parse file");
-                
+
                     let mut visitor = FunctionVisitor {
                         target_fn_name: current_function.to_string(),
                         found: false,
@@ -92,7 +95,7 @@ fn scan_for_unsafe_blocks(file_path: &str, unsafe_re: &Regex, function_re: &Rege
             }
         }
     }
-    
+
     Ok(())
 }
 
