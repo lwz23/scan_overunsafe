@@ -73,6 +73,7 @@ fn contains_large_unsafe_block(block: &Block, name: &str) -> bool {
 /// UnsafeBlockChecker is responsible for detecting unsafe blocks within code.
 struct UnsafeBlockChecker {
     has_large_unsafe: bool,
+    //current_file:String,
     current_function_name: String,
 }
 
@@ -90,6 +91,7 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 }
             });
             
+            println!("-----------------------------------------------------------------");
             // Debug output with additional information
             println!(
                 "Checking unsafe block with {} statements, complex: {}, name: {}",
@@ -130,7 +132,7 @@ fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashS
     let mut visitor = FunctionVisitor {
         outputted_functions,
     };
-    
+ 
     visitor.visit_file(&parsed_file);
     Ok(())
 }
@@ -148,7 +150,8 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<Str
                 eprintln!("Failed to process directory {}: {}", path.display(), e);
             }
         } else if path.extension().map_or(false, |ext| ext == "rs") {
-            println!("Processing file: {}", path.display());
+            let file_name=path.display();
+            println!("Processing file: {}", file_name);
             if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions) {
                 eprintln!("Failed to scan file {}: {}", path.display(), e);
             }
@@ -160,7 +163,7 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<Str
 
 /// Main function to start scanning the Rust code base for large unsafe blocks.
 fn main() -> Result<()> {
-    let crate_dir = r"C:\Users\ROG\Desktop\overunsafe库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5"; // Adjust to the directory of your crate
+    let crate_dir = r"C:\Users\ROG\Desktop\overunsafe库"; // Adjust to the directory of your crate
 
     let outputted_functions = Arc::new(Mutex::new(HashSet::new()));
     process_directory(crate_dir, &outputted_functions)?;
