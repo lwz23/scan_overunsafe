@@ -1,0 +1,166 @@
+name: Main Checks
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/main-checks.yml"
+      - "ci/**"
+      - "packages/**/*"
+      - "Cargo.toml"
+      - "Cargo.lock"
+  push:
+    branches: [master]
+
+jobs:
+  spell_check:
+    name: spellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check spelling
+        run: |
+          sudo apt-get install aspell
+          ci/spellcheck.sh list
+
+  doc_tests:
+    name: Documentation Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+
+      # for wasm-bindgen-cli, always use stable rust
+      - name: Setup toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install wasm-bindgen-cli
+        shell: bash
+        run: ./ci/install-wasm-bindgen-cli.sh
+
+      - name: Setup toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          targets: wasm32-unknown-unknown
+
+      - uses: browser-actions/setup-geckodriver@latest
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: nanasess/setup-chromedriver@v2
+
+      - name: Run doctest
+        run: |
+          ls packages | xargs -I {} \
+            cargo test \
+              -p {} \
+              --doc \
+              --all-features \
+              --target wasm32-unknown-unknown
+
+  integration_tests:
+    name: Integration Tests on ${{ matrix.toolchain }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - 1.76.0
+          - stable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+
+      # for wasm-bindgen-cli, always use stable rust
+      - name: Setup toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install wasm-bindgen-cli
+        shell: bash
+        run: ./ci/install-wasm-bindgen-cli.sh
+
+      - name: Setup toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          targets: wasm32-unknown-unknown
+
+      - uses: browser-actions/setup-geckodriver@latest
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: nanasess/setup-chromedriver@v2
+
+      - name: Run tests - yew
+        run: |
+          cd packages/yew
+          CHROMEDRIVER=$(which chromedriver) cargo test --features csr,hydration,ssr --target wasm32-unknown-unknown
+          GECKODRIVER=$(which geckodriver) cargo test --features csr,hydration,ssr --target wasm32-unknown-unknown
+
+      - name: Run tests - yew-router
+        run: |
+          cd packages/yew-router
+          CHROMEDRIVER=$(which chromedriver) cargo test --target wasm32-unknown-unknown
+          GECKODRIVER=$(which geckodriver) cargo test --target wasm32-unknown-unknown
+
+  unit_tests:
+    name: Unit Tests on ${{ matrix.toolchain }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - 1.76.0
+          - stable
+          - nightly
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run native tests
+        env:
+          # workaround for lack of ternary operator
+          # see https://github.com/orgs/community/discussions/25725
+          RUSTFLAGS: ${{ matrix.toolchain == 'nightly' && '--cfg nightly_yew' || '' }}
+        run: ls packages | grep -v "^yew$" | xargs -I {} cargo test --all-targets -p {}
+
+      - name: Run native tests for yew
+        env:
+          # workaround for lack of ternary operator
+          # see https://github.com/orgs/community/discussions/25725
+          RUSTFLAGS: ${{ matrix.toolchain == 'nightly' && '--cfg nightly_yew' || '' }}
+        run: cargo test -p yew --all-features
+
+  test-lints:
+    name: Test lints on nightly
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        env:
+          RUSTFLAGS: --cfg nightly_yew --cfg yew_lints
+        run: cargo test -p yew-macro test_html_lints

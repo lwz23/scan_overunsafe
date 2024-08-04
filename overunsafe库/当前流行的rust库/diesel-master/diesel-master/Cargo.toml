@@ -1,0 +1,72 @@
+[workspace]
+resolver = "2"
+members = [
+    "diesel",
+    "diesel_cli",
+    "diesel_derives",
+    "diesel_tests",
+    "diesel_migrations",
+    "diesel_migrations/migrations_internals",
+    "diesel_migrations/migrations_macros",
+    "diesel_dynamic_schema",
+    "diesel_table_macro_syntax",
+    "dsl_auto_type",
+    "examples/mysql/all_about_inserts",
+    "examples/mysql/getting_started_step_1",
+    "examples/mysql/getting_started_step_2",
+    "examples/mysql/getting_started_step_3",
+    "examples/postgres/advanced-blog-cli",
+    "examples/postgres/all_about_inserts",
+    "examples/postgres/all_about_updates",
+    "examples/postgres/getting_started_step_1",
+    "examples/postgres/getting_started_step_2",
+    "examples/postgres/getting_started_step_3",
+    "examples/postgres/custom_types",
+    "examples/postgres/composite_types",
+    "examples/postgres/relations",
+    "examples/sqlite/all_about_inserts",
+    "examples/sqlite/getting_started_step_1",
+    "examples/sqlite/getting_started_step_2",
+    "examples/sqlite/getting_started_step_3",
+    "examples/sqlite/relations", "xtask",
+]
+
+[workspace.package]
+rust-version = "1.78.0"
+include = ["src/**/*.rs", "tests/**/*.rs", "LICENSE-*", "README.md"]
+edition = "2021"
+
+[workspace.dependencies]
+libsqlite3-sys = "0.29"
+
+# Config for 'cargo dist'
+[workspace.metadata.dist]
+# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.14.1"
+# CI backends to support
+ci = "github"
+# The installers to generate for each app
+installers = ["shell", "powershell"]
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+# Publish jobs to run in CI
+pr-run-mode = "plan"
+# Whether cargo-dist should create a Github Release or use an existing draft
+create-release = false
+# Whether to install an updater program
+install-updater = false
+
+[workspace.metadata.dist.github-custom-runners]
+aarch64-apple-darwin = "macos-14"
+x86_64-unknown-linux-gnu = "ubuntu-22.04"
+
+[profile.dev.package.insta]
+opt-level = 3
+
+[profile.dev.package.similar]
+opt-level = 3
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

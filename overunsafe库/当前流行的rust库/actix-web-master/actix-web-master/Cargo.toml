@@ -1,0 +1,61 @@
+[workspace]
+resolver = "2"
+members = [
+    "actix-files",
+    "actix-http-test",
+    "actix-http",
+    "actix-multipart",
+    "actix-multipart-derive",
+    "actix-router",
+    "actix-test",
+    "actix-web-actors",
+    "actix-web-codegen",
+    "actix-web",
+    "awc",
+]
+
+[workspace.package]
+homepage = "https://actix.rs"
+repository = "https://github.com/actix/actix-web"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.72"
+
+[profile.dev]
+# Disabling debug info speeds up builds a bunch and we don't rely on it for debugging that much.
+debug = 0
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+
+[patch.crates-io]
+actix-files = { path = "actix-files" }
+actix-http = { path = "actix-http" }
+actix-http-test = { path = "actix-http-test" }
+actix-multipart = { path = "actix-multipart" }
+actix-multipart-derive = { path = "actix-multipart-derive" }
+actix-router = { path = "actix-router" }
+actix-test = { path = "actix-test" }
+actix-web = { path = "actix-web" }
+actix-web-actors = { path = "actix-web-actors" }
+actix-web-codegen = { path = "actix-web-codegen" }
+awc = { path = "awc" }
+
+# uncomment for quick testing against local actix-net repo
+# actix-service = { path = "../actix-net/actix-service" }
+# actix-macros = { path = "../actix-net/actix-macros" }
+# actix-rt = { path = "../actix-net/actix-rt" }
+# actix-codec = { path = "../actix-net/actix-codec" }
+# actix-utils = { path = "../actix-net/actix-utils" }
+# actix-tls = { path = "../actix-net/actix-tls" }
+# actix-server = { path = "../actix-net/actix-server" }
+
+[workspace.lints.rust]
+rust_2018_idioms = { level = "deny" }
+future_incompatible = { level = "deny" }
+nonstandard_style = { level = "deny" }
+
+[workspace.lints.clippy]
+# clone_on_ref_ptr = { level = "deny" }

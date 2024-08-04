@@ -202,7 +202,7 @@ lazy_static::lazy_static! {
 
 /// Main function to start scanning the Rust code base for large unsafe blocks.
 fn main() -> Result<()> {
-    let crate_dir = r"C:\Users\ROG\Desktop\overunsafe库"; // Adjust to the directory of your crate
+    let crate_dir = r"overunsafe库"; // Adjust to the directory of your crate
 
     let outputted_functions = Arc::new(Mutex::new(HashSet::new()));
 

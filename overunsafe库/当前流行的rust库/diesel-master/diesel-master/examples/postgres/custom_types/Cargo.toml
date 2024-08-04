@@ -1,0 +1,13 @@
+[package]
+name = "custom_types"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+diesel = { path = "../../../diesel", version = "2.2.0", features = ["postgres"] }
+
+[[bin]]
+name = "custom-types"
+path = "src/main.rs"
+doc = false

@@ -1,0 +1,24 @@
+digraph {
+    subgraph cluster_web {
+        label="actix/actix-web"
+        "awc"
+        "web"
+        "files"
+        "http"
+        "multipart"
+        "web-actors"
+        "web-codegen"
+        "http-test"
+        "test"
+        "router"
+    }
+
+    "web" -> { "web-codegen" "http" "router" }
+    "awc" -> { "http" }
+    "web-codegen" -> { "router" }[color = red]
+    "web-actors" -> { "actix" "web" "http" }
+    "multipart" -> { "web" }
+    "files" -> { "web" }
+    "http-test" -> { "awc" }
+    "test" -> { "web" "awc" "http-test" }
+}

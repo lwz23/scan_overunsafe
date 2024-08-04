@@ -1,0 +1,15 @@
+[default]
+template_dir = "api/templates/"
+
+[default.databases.sea_orm]
+# Mysql
+# make sure to enable "sqlx-mysql" feature in Cargo.toml, i.e default = ["sqlx-mysql"]
+# url = "mysql://root:@localhost/rocket_example"
+
+# Postgres
+# make sure to enable "sqlx-postgres" feature in Cargo.toml, i.e default = ["sqlx-postgres"]
+# url = "postgres://user:pass@localhost:5432/rocket"
+
+# SQLite
+# make sure to enable "sqlx-sqlite" feature in Cargo.toml, i.e default = ["sqlx-sqlite"]
+url = "sqlite::memory:"

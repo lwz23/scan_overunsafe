@@ -1,0 +1,33 @@
+error[E0271]: type mismatch resolving `<name as IsContainedInGroupBy<id>>::Output == Yes`
+  --> tests/fail/cannot_load_default_select_with_group_by.rs:16:32
+   |
+16 |         .load::<(i32, String)>(&mut conn);
+   |          ----                  ^^^^^^^^^ type mismatch resolving `<name as IsContainedInGroupBy<id>>::Output == Yes`
+   |          |
+   |          required by a bound introduced by this call
+   |
+note: expected this to be `diesel::expression::is_contained_in_group_by::Yes`
+  --> tests/fail/cannot_load_default_select_with_group_by.rs:8:9
+   |
+8  |         name -> Text,
+   |         ^^^^
+note: required for `columns::id` to implement `ValidGrouping<columns::name>`
+  --> tests/fail/cannot_load_default_select_with_group_by.rs:7:9
+   |
+7  |         id -> Integer,
+   |         ^^
+   = note: associated types for the current `impl` cannot be restricted in `where` clauses
+   = note: 1 redundant requirement hidden
+   = note: required for `(columns::id, columns::name)` to implement `ValidGrouping<columns::name>`
+   = note: required for `SelectStatement<FromClause<table>, DefaultSelectClause<FromClause<table>>, ..., ..., ..., ..., ...>` to implement `Query`
+   = note: required for `SelectStatement<FromClause<table>, DefaultSelectClause<FromClause<table>>, ..., ..., ..., ..., ...>` to implement `LoadQuery<'_, _, (i32, std::string::String)>`
+note: required by a bound in `diesel::RunQueryDsl::load`
+  --> $DIESEL/src/query_dsl/mod.rs
+   |
+   |     fn load<'query, U>(self, conn: &mut Conn) -> QueryResult<Vec<U>>
+   |        ---- required by a bound in this associated function
+   |     where
+   |         Self: LoadQuery<'query, Conn, U>,
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `RunQueryDsl::load`
+   = note: consider using `--verbose` to print the full type name to the console
+   = note: consider using `--verbose` to print the full type name to the console

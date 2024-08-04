@@ -1,0 +1,77 @@
+error[E0599]: the method `only` exists for struct `SelectStatement<FromClause<table>, SelectClause<id>>`, but its trait bounds were not satisfied
+  --> tests/fail/only_only_on_table.rs:13:32
+   |
+13 |       foo::table.select(foo::id).only();
+   |                                  ^^^^ method cannot be called due to unsatisfied trait bounds
+   |
+  ::: $DIESEL/src/query_builder/select_statement/mod.rs
+   |
+   | / #[diesel_derives::__diesel_public_if(
+   | |     feature = "i-implement-a-third-party-backend-and-opt-into-breaking-changes",
+   | |     public_fields(
+   | |         select,
+...  |
+   | |     )
+   | | )]
+   | |__- doesn't satisfy `_: OnlyDsl` or `_: Table`
+   |
+   = note: the following trait bounds were not satisfied:
+           `SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>>: Table`
+           which is required by `SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>>: diesel::dsl::OnlyDsl`
+           `&SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>>: Table`
+           which is required by `&SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>>: diesel::dsl::OnlyDsl`
+           `&mut SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>>: Table`
+           which is required by `&mut SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>>: diesel::dsl::OnlyDsl`
+
+error[E0599]: the method `only` exists for struct `SelectStatement<FromClause<table>, SelectClause<id>, NoDistinctClause, WhereClause<Grouped<Eq<id, ...>>>>`, but its trait bounds were not satisfied
+  --> tests/fail/only_only_on_table.rs:14:54
+   |
+14 |       foo::table.select(foo::id).filter(foo::id.eq(1)).only();
+   |                                                        ^^^^ method cannot be called due to unsatisfied trait bounds
+   |
+  ::: $DIESEL/src/query_builder/select_statement/mod.rs
+   |
+   | / #[diesel_derives::__diesel_public_if(
+   | |     feature = "i-implement-a-third-party-backend-and-opt-into-breaking-changes",
+   | |     public_fields(
+   | |         select,
+...  |
+   | |     )
+   | | )]
+   | |__- doesn't satisfy `_: OnlyDsl` or `_: Table`
+   |
+   = note: consider using `--verbose` to print the full type name to the console
+   = note: the following trait bounds were not satisfied:
+           `SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<columns::id, diesel::expression::bound::Bound<BigInt, i64>>>>>: Table`
+           which is required by `SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<columns::id, diesel::expression::bound::Bound<BigInt, i64>>>>>: diesel::dsl::OnlyDsl`
+           `&SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<columns::id, diesel::expression::bound::Bound<BigInt, i64>>>>>: Table`
+           which is required by `&SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<columns::id, diesel::expression::bound::Bound<BigInt, i64>>>>>: diesel::dsl::OnlyDsl`
+           `&mut SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<columns::id, diesel::expression::bound::Bound<BigInt, i64>>>>>: Table`
+           which is required by `&mut SelectStatement<FromClause<foo::table>, diesel::query_builder::select_clause::SelectClause<columns::id>, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<columns::id, diesel::expression::bound::Bound<BigInt, i64>>>>>: diesel::dsl::OnlyDsl`
+
+error[E0599]: the method `only` exists for struct `id`, but its trait bounds were not satisfied
+  --> tests/fail/only_only_on_table.rs:15:31
+   |
+8  |         id -> Int8,
+   |         -- method `only` not found for this struct because it doesn't satisfy `columns::id: Table` or `columns::id: diesel::dsl::OnlyDsl`
+...
+15 |     foo::table.select(foo::id.only());
+   |                               ^^^^ method cannot be called on `id` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `columns::id: Table`
+           which is required by `columns::id: diesel::dsl::OnlyDsl`
+           `&columns::id: Table`
+           which is required by `&columns::id: diesel::dsl::OnlyDsl`
+           `&mut columns::id: Table`
+           which is required by `&mut columns::id: diesel::dsl::OnlyDsl`
+note: the trait `Table` must be implemented
+  --> $DIESEL/src/query_source/mod.rs
+   |
+   | pub trait Table: QuerySource + AsQuery + Sized {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following trait defines an item `only`, perhaps you need to implement it:
+           candidate #1: `diesel::dsl::OnlyDsl`
+
+error: internal compiler error: compiler/rustc_infer/src/infer/at.rs:364:21: relating different kinds: diesel::pg::Pg '?2

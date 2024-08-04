@@ -1,0 +1,30 @@
+error: unexpected end of input, expected `=`
+       help: The correct format looks like `#[diesel(column_name = foo)]`
+  --> tests/fail/derive/bad_column_name.rs:16:25
+   |
+16 |     #[diesel(column_name)]
+   |                         ^
+
+error: expected `=`
+  --> tests/fail/derive/bad_column_name.rs:23:25
+   |
+23 |     #[diesel(column_name(another))]
+   |                         ^
+
+error: expected string literal
+  --> tests/fail/derive/bad_column_name.rs:30:28
+   |
+30 |     #[diesel(column_name = true)]
+   |                            ^^^^
+
+error: Expected valid identifier, found `spa ce`. Diesel does not support column names with whitespaces yet
+  --> tests/fail/derive/bad_column_name.rs:38:28
+   |
+38 |     #[diesel(column_name = "spa ce")]
+   |                            ^^^^^^^^
+
+error: Expected valid identifier, found `spa ce`. Diesel does not support column names with whitespaces yet
+  --> tests/fail/derive/bad_column_name.rs:46:28
+   |
+46 |     #[diesel(column_name = "spa ce")]
+   |                            ^^^^^^^^

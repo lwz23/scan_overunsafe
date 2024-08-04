@@ -1,0 +1,11 @@
+[package]
+name = "all_about_updates"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+diesel = { version = "2.2.0", path = "../../../diesel", features = ["postgres"] }
+
+[lib]
+doc = false

@@ -1,0 +1,28 @@
+name: Benchmark
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check_benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          rustup set profile minimal
+          rustup install nightly
+          rustup override set nightly
+
+      - name: Check benchmark
+        run: cargo bench --bench=server -- --sample-size=15

@@ -1,0 +1,30 @@
+error: unexpected end of input, expected `=`
+       help: The correct format looks like `#[diesel(table_name = foo)]`
+  --> tests/fail/derive/bad_table_name.rs:12:20
+   |
+12 | #[diesel(table_name)]
+   |                    ^
+
+error: expected `=`
+  --> tests/fail/derive/bad_table_name.rs:18:20
+   |
+18 | #[diesel(table_name(users))]
+   |                    ^
+
+error: expected identifier, found keyword `true`
+  --> tests/fail/derive/bad_table_name.rs:24:23
+   |
+24 | #[diesel(table_name = true)]
+   |                       ^^^^
+
+error: expected identifier
+  --> tests/fail/derive/bad_table_name.rs:30:23
+   |
+30 | #[diesel(table_name = "not a path")]
+   |                       ^^^^^^^^^^^^
+
+error[E0433]: failed to resolve: use of undeclared crate or module `does`
+  --> tests/fail/derive/bad_table_name.rs:36:23
+   |
+36 | #[diesel(table_name = does::not::exist)]
+   |                       ^^^^ use of undeclared crate or module `does`

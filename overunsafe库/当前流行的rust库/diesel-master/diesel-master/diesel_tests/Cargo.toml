@@ -1,0 +1,42 @@
+[package]
+name = "diesel_tests"
+version = "0.1.0"
+authors = ["Sage Griffin <sean@seantheprogrammer.com>"]
+license = "MIT OR Apache-2.0"
+autotests = false
+autobenches = false
+edition = "2021"
+publish = false
+
+[dependencies]
+assert_matches = "1.0.1"
+chrono = { version = "0.4.20", default-features = false, features = ["clock", "std"] }
+diesel = { path = "../diesel", default-features = false, features = ["quickcheck", "chrono", "uuid", "serde_json", "ipnet-address", "network-address", "numeric", "with-deprecated"] }
+diesel_migrations = { path = "../diesel_migrations" }
+dotenvy = "0.15"
+quickcheck = "1.0.3"
+uuid = { version = "1.0.0" }
+serde_json = { version=">=0.9, <2.0" }
+ipnet = { version = "2.5.0" }
+ipnetwork = ">=0.12.2, <0.21.0"
+bigdecimal = ">= 0.0.13, < 0.5.0"
+rand = "0.8.4"
+libsqlite3-sys = { workspace = true, optional = true }
+pq-sys = { version = "0.6", optional = true }
+pq-src = { version = "0.3", optional = true }
+mysqlclient-sys = { version = "0.4", optional = true }
+mysqlclient-src = { version = "0.1.0", optional = true }
+
+[features]
+default = []
+unstable = ["diesel/unstable"]
+postgres = ["diesel/postgres"]
+sqlite = ["diesel/sqlite"]
+mysql = ["diesel/mysql"]
+returning_clauses_for_sqlite_3_35 = ["diesel/returning_clauses_for_sqlite_3_35"]
+
+[[test]]
+name = "integration_tests"
+path = "tests/lib.rs"
+harness = true
+
