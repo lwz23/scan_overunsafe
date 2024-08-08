@@ -1,10 +1,12 @@
 use std::collections::HashSet;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{BufRead, BufReader, Write};
 use std::sync::{Arc, Mutex};
 use anyhow::Result;
 use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file, Attribute, Expr, Block, Stmt};
 use quote::quote;
+use walkdir::WalkDir;
+use regex::Regex;
 
 /// Struct to visit functions and methods in the Rust code.
 struct FunctionVisitor<'a> {
@@ -18,21 +20,27 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
 
         if !self.is_test_function(&node.attrs)
             && !self.outputted_functions.lock().unwrap().contains(&function_name)
-            && contains_large_unsafe_block(&node.block, &function_name, self.file_path)
+            && contains_unsafe_block(&node.block, &function_name, self.file_path)
         {
             let function_code = quote! {
                 #node
             };
             let formatted_code = prettyplease::unparse(&syn::parse_quote!(#function_code));
-            let output = format!(
-                "Found function with large unsafe block in {}:\nFile: {}\n{}\n\n",
-                function_name, self.file_path, formatted_code
-            );
+            let start_line = node.sig.ident.span().start().line;
+            let end_line = node.block.brace_token.span.close().end().line;
+            let has_safety_comment = scan_safety_comments(self.file_path, start_line, end_line);
 
-            // Output to file with lock
-            {
-                let mut log_file = LOG_FILE.lock().unwrap();
-                writeln!(log_file, "{}", output).expect("Failed to write to log file");
+            if !has_safety_comment {
+                let output = format!(
+                    "Found function with unsafe block but no SAFETY comment in {}:\nFile: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
+                    function_name, self.file_path, start_line, end_line, formatted_code
+                );
+
+                // Output to file with lock
+                {
+                    let mut log_file = LOG_FILE.lock().unwrap();
+                    writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                }
             }
 
             // Add function to the set
@@ -47,21 +55,27 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
 
                 if !self.is_test_function(&method.attrs)
                     && !self.outputted_functions.lock().unwrap().contains(&method_name)
-                    && contains_large_unsafe_block(&method.block, &method_name, self.file_path)
+                    && contains_unsafe_block(&method.block, &method_name, self.file_path)
                 {
                     let method_code = quote! {
                         #method
                     };
                     let formatted_code = prettyplease::unparse(&syn::parse_quote!(#method_code));
-                    let output = format!(
-                        "Found method with large unsafe block in {}:\nFile: {}\n{}\n\n",
-                        method_name, self.file_path, formatted_code
-                    );
+                    let start_line = method.sig.ident.span().start().line;
+                    let end_line = method.block.brace_token.span.close().end().line;
+                    let has_safety_comment = scan_safety_comments(self.file_path, start_line, end_line);
 
-                    // Output to file with lock
-                    {
-                        let mut log_file = LOG_FILE.lock().unwrap();
-                        writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                    if !has_safety_comment {
+                        let output = format!(
+                            "Found method with unsafe block but no SAFETY comment in {}:\nFile: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
+                            method_name, self.file_path, start_line, end_line, formatted_code
+                        );
+
+                        // Output to file with lock
+                        {
+                            let mut log_file = LOG_FILE.lock().unwrap();
+                            writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                        }
                     }
 
                     // Add method to the set
@@ -80,56 +94,30 @@ impl<'a> FunctionVisitor<'a> {
     }
 }
 
-/// Determines if a function body or method body contains a large unsafe block.
-fn contains_large_unsafe_block(block: &Block, name: &str, file_path: &str) -> bool {
+/// Determines if a function body or method body contains an unsafe block.
+fn contains_unsafe_block(block: &Block, name: &str, file_path: &str) -> bool {
     let mut checker = UnsafeBlockChecker { 
-        has_large_unsafe: false,
+        has_unsafe: false,
         current_function_name: name.to_string(),
         current_file_path: file_path.to_string(),
     };
     checker.visit_block(block);
     
-    checker.has_large_unsafe
+    checker.has_unsafe
 }
 
 /// UnsafeBlockChecker is responsible for detecting unsafe blocks within code.
 struct UnsafeBlockChecker {
-    has_large_unsafe: bool,
+    has_unsafe: bool,
     current_file_path: String,
     current_function_name: String,
 }
 
 impl<'ast> Visit<'ast> for UnsafeBlockChecker {
     fn visit_expr(&mut self, node: &'ast Expr) {
-        if let Expr::Unsafe(unsafe_block) = node {
-            // Calculate the number of statements in the unsafe block
-            let num_stmts = unsafe_block.block.stmts.len();
-            
-            // Check for complex structures, such as loops and conditionals
-            let has_complex_structure = unsafe_block.block.stmts.iter().any(|stmt| {
-                matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
-            });
-
-            // Debug output with additional information
-            let output = format!(
-                "-----------------------------------------------------------------\n\
-                Checking unsafe block with {} statements, complex: {}, name: {}, file: {}\n",
-                num_stmts,
-                has_complex_structure,
-                self.current_function_name,
-                self.current_file_path
-            );
-
-            // Output to file with lock
-            {
-                let mut log_file = LOG_FILE.lock().unwrap();
-                writeln!(log_file, "{}", output).expect("Failed to write to log file");
-            }
-
-            // If the unsafe block contains more than 5 statements or has complex structures, consider it a large unsafe block
-            if num_stmts >= 5 || has_complex_structure {
-                self.has_large_unsafe = true;
-            }
+        if let Expr::Unsafe(_unsafe_block) = node {
+            // If the unsafe block is found, set the flag to true
+            self.has_unsafe = true;
         }
         visit::visit_expr(self, node);
     }
@@ -150,7 +138,7 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
     }
 }
 
-/// Scans a Rust source file for functions with large unsafe blocks.
+/// Scans a Rust source file for functions with unsafe blocks.
 fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<String>>>) -> Result<()> {
     let source_code = fs::read_to_string(file_path)?;
     let parsed_file = parse_file(&source_code)?;
@@ -164,7 +152,7 @@ fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashS
     Ok(())
 }
 
-/// Processes a directory, scanning all Rust files for large unsafe blocks.
+/// Processes a directory, scanning all Rust files for unsafe blocks.
 fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<String>>>) -> Result<()> {
     let paths: Vec<_> = fs::read_dir(dir_path)?
         .filter_map(|entry| entry.ok())
@@ -200,7 +188,28 @@ lazy_static::lazy_static! {
     static ref LOG_FILE: Mutex<File> = Mutex::new(File::create("scan_results.txt").expect("Failed to create log file"));
 }
 
-/// Main function to start scanning the Rust code base for large unsafe blocks.
+/// Scans for SAFETY comments within a specified line range in a Rust source file.
+fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> bool {
+    // Define regular expression for single-line SAFETY comments
+    let re_single_line = Regex::new(r"//\s*SAFETY:").unwrap();
+    let file = File::open(file_path).expect("Failed to open file");
+    let reader = BufReader::new(file);
+
+    // Process each line in the file
+    for (line_number, line) in reader.lines().enumerate() {
+        if let Ok(line) = line {
+            if line_number + 1 >= start_line && line_number + 1 <= end_line {
+                // Check for single-line SAFETY comments
+                if re_single_line.is_match(&line) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Main function to start scanning the Rust code base for unsafe blocks.
 fn main() -> Result<()> {
     let crate_dir = r"overunsafe库"; // Adjust to the directory of your crate
 
