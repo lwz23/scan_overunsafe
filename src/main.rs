@@ -11,15 +11,16 @@ use regex::Regex;
 /// Struct to visit functions and methods in the Rust code.
 struct FunctionVisitor<'a> {
     file_path: &'a str, // 添加文件路径字段
-    outputted_functions: &'a Arc<Mutex<HashSet<String>>>,
+    outputted_functions: &'a Arc<Mutex<HashSet<(String, String)>>>,
 }
 
 impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
     fn visit_item_fn(&mut self, node: &'ast ItemFn) {
         let function_name = node.sig.ident.to_string();
+        let unique_key = (function_name.clone(), self.file_path.to_string());
 
         if !self.is_test_function(&node.attrs)
-            && !self.outputted_functions.lock().unwrap().contains(&function_name)
+            && !self.outputted_functions.lock().unwrap().contains(&unique_key)
         {
             let start_line = node.sig.ident.span().start().line;
             let end_line = node.block.brace_token.span.close().end().line;
@@ -49,11 +50,12 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                 {
                     let mut log_file = LOG_FILE.lock().unwrap();
                     writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                    log_file.flush().expect("Failed to flush log file");
                 }
             }
 
-            // Add function to the set
-            self.outputted_functions.lock().unwrap().insert(function_name);
+            // Add function to the set, using function name and file path as the unique key
+            self.outputted_functions.lock().unwrap().insert(unique_key);
         }
     }
 
@@ -61,9 +63,10 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
         for item in &node.items {
             if let ImplItem::Fn(method) = item {
                 let method_name = method.sig.ident.to_string();
+                let unique_key = (method_name.clone(), self.file_path.to_string());
 
                 if !self.is_test_function(&method.attrs)
-                    && !self.outputted_functions.lock().unwrap().contains(&method_name)
+                    && !self.outputted_functions.lock().unwrap().contains(&unique_key)
                 {
                     let start_line = method.sig.ident.span().start().line;
                     let end_line = method.block.brace_token.span.close().end().line;
@@ -93,11 +96,12 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                         {
                             let mut log_file = LOG_FILE.lock().unwrap();
                             writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                            log_file.flush().expect("Failed to flush log file");
                         }
                     }
 
-                    // Add method to the set
-                    self.outputted_functions.lock().unwrap().insert(method_name);
+                    // Add method to the set, using method name and file path as the unique key
+                    self.outputted_functions.lock().unwrap().insert(unique_key);
                 }
             }
         }
@@ -124,21 +128,19 @@ struct UnsafeBlockChecker {
 impl<'ast> Visit<'ast> for UnsafeBlockChecker {
     fn visit_expr(&mut self, node: &'ast Expr) {
         if let Expr::Unsafe(unsafe_block) = node {
-            // If the unsafe block is found, set the flag to true
+            // 如果检测到 unsafe 块，设置 has_unsafe 为 true
             self.has_unsafe = true;
 
-            // Calculate the number of statements in the unsafe block
+            // 计算 unsafe 块中的指令数
             let num_stmts = unsafe_block.block.stmts.len();
-            
-            // Check for complex structures, such as loops and conditionals
-            let has_complex_structure = unsafe_block.block.stmts.iter().any(|stmt| {
-                matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
-            });
 
-            // Debug output with additional information
+            // 移除复杂结构检查，直接检测指令数
+            let has_complex_structure = false;
+
+            // 调试输出额外信息
             let output = format!(
                 "-----------------------------------------------------------------\n\
-                Checking unsafe block with {} statements, complex: {}, name: {}, with_SAFETY_comment: {}, file: {} \n",
+                Checking unsafe block with {} statements, complex: {}, name: {}, with_SAFETY_comment: {}, file: {}\n",
                 num_stmts,
                 has_complex_structure,
                 self.current_function_name,
@@ -146,22 +148,25 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 self.current_file_path,
             );
 
-            // Output to file with lock
+            // 将输出写入日志文件
             {
                 let mut log_file = LOG_FILE.lock().unwrap();
                 writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                log_file.flush().expect("Failed to flush log file");
             }
 
-            // If the unsafe block contains more than 5 statements or has complex structures, consider it a large unsafe block
-            if num_stmts >= 5 || has_complex_structure {
+            // 如果 unsafe 块包含超过 5 条指令，则认为它是一个大型 unsafe 块
+            if num_stmts >= 5 {
                 self.has_large_unsafe = true;
             }
         }
+        // 确保递归遍历表达式节点
         visit::visit_expr(self, node);
     }
 
     fn visit_block(&mut self, block: &'ast Block) {
         for stmt in &block.stmts {
+            // 遍历每个语句，确保它们被递归地处理
             self.visit_stmt(stmt);
         }
     }
@@ -171,13 +176,13 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             Stmt::Local(local) => self.visit_local(local),
             Stmt::Item(item) => self.visit_item(item),
             Stmt::Expr(expr, _) => self.visit_expr(expr),
-            Stmt::Macro(mac) => self.visit_macro(&mac.mac), // Correct usage here
+            Stmt::Macro(mac) => self.visit_macro(&mac.mac), // 确保宏也被正确处理
         }
     }
 }
 
 /// Scans a Rust source file for functions with unsafe blocks.
-fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<String>>>) -> Result<()> {
+fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>) -> Result<()> {
     let source_code = fs::read_to_string(file_path)?;
     let parsed_file = parse_file(&source_code)?;
 
@@ -191,7 +196,7 @@ fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashS
 }
 
 /// Processes a directory, scanning all Rust files for unsafe blocks.
-fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<String>>>) -> Result<()> {
+fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>) -> Result<()> {
     let paths: Vec<_> = fs::read_dir(dir_path)?
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
@@ -210,6 +215,7 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<Str
                 println!("Processing file: {}", path_display);
                 let mut log = LOG_FILE.lock().unwrap();
                 writeln!(log, "Processing file: {}", path_display).expect("Failed to write to log file");
+                log.flush().expect("Failed to flush log file");
             }
 
             if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions) {
@@ -249,9 +255,9 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
 
 /// Main function to start scanning the Rust code base for unsafe blocks.
 fn main() -> Result<()> {
-    let crate_dir = r"overunsafe库"; // Adjust to the directory of your crate
+    let crate_dir = r"overunsafe库\存在overunsafe的rust库"; // Adjust to the directory of your crate
 
-    let outputted_functions = Arc::new(Mutex::new(HashSet::new()));
+    let outputted_functions = Arc::new(Mutex::new(HashSet::<(String, String)>::new()));
 
     process_directory(crate_dir, &outputted_functions)?;
 
