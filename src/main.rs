@@ -134,17 +134,19 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             // 计算 unsafe 块中的指令数
             let num_stmts = unsafe_block.block.stmts.len();
 
-            // 移除复杂结构检查，直接检测指令数
-            let has_complex_structure = false;
+            // 复杂结构检查
+            let has_complex_structure = unsafe_block.block.stmts.iter().any(|stmt| {
+                matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
+            });
 
             // 调试输出额外信息
             let output = format!(
                 "-----------------------------------------------------------------\n\
-                Checking unsafe block with {} statements, complex: {}, name: {}, with_SAFETY_comment: {}, file: {}\n",
+                Checking unsafe block with {} statements, Complex: {}, With_SAFETY_comment: {}, Name: {},  File: {}\n",
                 num_stmts,
                 has_complex_structure,
-                self.current_function_name,
                 self.has_safety_comment,
+                self.current_function_name,
                 self.current_file_path,
             );
 
@@ -155,8 +157,8 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 log_file.flush().expect("Failed to flush log file");
             }
 
-            // 如果 unsafe 块包含超过 5 条指令，则认为它是一个大型 unsafe 块
-            if num_stmts >= 5 {
+            // 如果 unsafe 块包含超过 5 条指令或者具有复杂结构，则认为它是一个大型 unsafe 块
+            if num_stmts >= 5 || has_complex_structure{
                 self.has_large_unsafe = true;
             }
         }
