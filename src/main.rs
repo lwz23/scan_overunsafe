@@ -10,14 +10,19 @@ use regex::Regex;
 
 /// Struct to visit functions and methods in the Rust code.
 struct FunctionVisitor<'a> {
-    file_path: &'a str, // 添加文件路径字段
+    file_path: &'a str,
     outputted_functions: &'a Arc<Mutex<HashSet<(String, String)>>>,
+    total_functions: &'a Arc<Mutex<usize>>,  // 新增：记录函数总数
+    total_unsafe_blocks: &'a Arc<Mutex<usize>>, // 新增：记录 unsafe 代码块总数
+    total_no_safety_unsafe_blocks: &'a Arc<Mutex<usize>>, // 新增：记录没有 SAFETY 注释的 unsafe 代码块数量
 }
 
 impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
     fn visit_item_fn(&mut self, node: &'ast ItemFn) {
         let function_name = node.sig.ident.to_string();
         let unique_key = (function_name.clone(), self.file_path.to_string());
+
+        *self.total_functions.lock().unwrap() += 1; // 记录总函数数
 
         if !self.is_test_function(&node.attrs)
             && !self.outputted_functions.lock().unwrap().contains(&unique_key)
@@ -32,6 +37,8 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                 current_function_name: function_name.clone(),
                 current_file_path: self.file_path.to_string(),
                 has_safety_comment,
+                total_unsafe_blocks: self.total_unsafe_blocks.clone(),
+                total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
             };
 
             checker.visit_block(&node.block);
@@ -46,7 +53,6 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                     function_name, self.file_path, start_line, end_line, formatted_code
                 );
 
-                // Output to file with lock
                 {
                     let mut log_file = LOG_FILE.lock().unwrap();
                     writeln!(log_file, "{}", output).expect("Failed to write to log file");
@@ -54,7 +60,6 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                 }
             }
 
-            // Add function to the set, using function name and file path as the unique key
             self.outputted_functions.lock().unwrap().insert(unique_key);
         }
     }
@@ -64,6 +69,8 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
             if let ImplItem::Fn(method) = item {
                 let method_name = method.sig.ident.to_string();
                 let unique_key = (method_name.clone(), self.file_path.to_string());
+
+                *self.total_functions.lock().unwrap() += 1; // 记录总函数数
 
                 if !self.is_test_function(&method.attrs)
                     && !self.outputted_functions.lock().unwrap().contains(&unique_key)
@@ -78,6 +85,8 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                         current_function_name: method_name.clone(),
                         current_file_path: self.file_path.to_string(),
                         has_safety_comment,
+                        total_unsafe_blocks: self.total_unsafe_blocks.clone(),
+                        total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
                     };
 
                     checker.visit_block(&method.block);
@@ -92,7 +101,6 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                             method_name, self.file_path, start_line, end_line, formatted_code
                         );
 
-                        // Output to file with lock
                         {
                             let mut log_file = LOG_FILE.lock().unwrap();
                             writeln!(log_file, "{}", output).expect("Failed to write to log file");
@@ -100,12 +108,10 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                         }
                     }
 
-                    // Add method to the set, using method name and file path as the unique key
                     self.outputted_functions.lock().unwrap().insert(unique_key);
                 }
             }
         }
-        // Visit child nodes
         visit::visit_item_impl(self, node);
     }
 }
@@ -123,23 +129,20 @@ struct UnsafeBlockChecker {
     current_file_path: String,
     current_function_name: String,
     has_safety_comment: bool,
+    total_unsafe_blocks: Arc<Mutex<usize>>, // 新增：记录 unsafe 代码块总数
+    total_no_safety_unsafe_blocks: Arc<Mutex<usize>>, // 新增：记录没有 SAFETY 注释的 unsafe 代码块数量
 }
 
 impl<'ast> Visit<'ast> for UnsafeBlockChecker {
     fn visit_expr(&mut self, node: &'ast Expr) {
         if let Expr::Unsafe(unsafe_block) = node {
-            // 如果检测到 unsafe 块，设置 has_unsafe 为 true
             self.has_unsafe = true;
 
-            // 计算 unsafe 块中的指令数
             let num_stmts = unsafe_block.block.stmts.len();
-
-            // 复杂结构检查
             let has_complex_structure = unsafe_block.block.stmts.iter().any(|stmt| {
                 matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
             });
 
-            // 调试输出额外信息
             let output = format!(
                 "-----------------------------------------------------------------\n\
                 Checking unsafe block with {} statements, Complex: {}, With_SAFETY_comment: {}, Name: {},  File: {}\n",
@@ -150,25 +153,26 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 self.current_file_path,
             );
 
-            // 将输出写入日志文件
             {
                 let mut log_file = LOG_FILE.lock().unwrap();
                 writeln!(log_file, "{}", output).expect("Failed to write to log file");
                 log_file.flush().expect("Failed to flush log file");
             }
 
-            // 如果 unsafe 块包含超过 5 条指令或者具有复杂结构，则认为它是一个大型 unsafe 块
-            if num_stmts >= 5 || has_complex_structure{
+            if num_stmts >= 5 || has_complex_structure {
                 self.has_large_unsafe = true;
             }
+
+            *self.total_unsafe_blocks.lock().unwrap() += 1; // 更新 unsafe 代码块总数
+            if !self.has_safety_comment {
+                *self.total_no_safety_unsafe_blocks.lock().unwrap() += 1; // 更新没有 SAFETY 注释的 unsafe 代码块数量
+            }
         }
-        // 确保递归遍历表达式节点
         visit::visit_expr(self, node);
     }
 
     fn visit_block(&mut self, block: &'ast Block) {
         for stmt in &block.stmts {
-            // 遍历每个语句，确保它们被递归地处理
             self.visit_stmt(stmt);
         }
     }
@@ -178,27 +182,28 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             Stmt::Local(local) => self.visit_local(local),
             Stmt::Item(item) => self.visit_item(item),
             Stmt::Expr(expr, _) => self.visit_expr(expr),
-            Stmt::Macro(mac) => self.visit_macro(&mac.mac), // 确保宏也被正确处理
+            Stmt::Macro(mac) => self.visit_macro(&mac.mac),
         }
     }
 }
 
-/// Scans a Rust source file for functions with unsafe blocks.
-fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>) -> Result<()> {
+fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>) -> Result<()> {
     let source_code = fs::read_to_string(file_path)?;
     let parsed_file = parse_file(&source_code)?;
 
     let mut visitor = FunctionVisitor {
-        file_path, // Pass the file path to the visitor
+        file_path,
         outputted_functions,
+        total_functions,
+        total_unsafe_blocks,
+        total_no_safety_unsafe_blocks,
     };
 
     visitor.visit_file(&parsed_file);
     Ok(())
 }
 
-/// Processes a directory, scanning all Rust files for unsafe blocks.
-fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>) -> Result<()> {
+fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>) -> Result<()> {
     let paths: Vec<_> = fs::read_dir(dir_path)?
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
@@ -206,13 +211,12 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(St
 
     paths.iter().for_each(|path| {
         if path.is_dir() {
-            if let Err(e) = process_directory(path.to_str().unwrap(), outputted_functions) {
+            if let Err(e) = process_directory(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks) {
                 eprintln!("Failed to process directory {}: {}", path.display(), e);
             }
         } else if path.extension().map_or(false, |ext| ext == "rs") {
             let path_display = path.display().to_string();
             
-            // Output to console and file with lock
             {
                 println!("Processing file: {}", path_display);
                 let mut log = LOG_FILE.lock().unwrap();
@@ -220,7 +224,7 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(St
                 log.flush().expect("Failed to flush log file");
             }
 
-            if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions) {
+            if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks) {
                 eprintln!("Failed to scan file {}: {}", path.display(), e);
             }
         }
@@ -229,23 +233,18 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(St
     Ok(())
 }
 
-// Use a global static mutex for the log file
 lazy_static::lazy_static! {
     static ref LOG_FILE: Mutex<File> = Mutex::new(File::create("scan_results.txt").expect("Failed to create log file"));
 }
 
-/// Scans for SAFETY comments within a specified line range in a Rust source file.
 fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> bool {
-    // Define regular expression for single-line SAFETY comments
     let re_single_line = Regex::new(r"//\s*SAFETY:").unwrap();
     let file = File::open(file_path).expect("Failed to open file");
     let reader = BufReader::new(file);
 
-    // Process each line in the file
     for (line_number, line) in reader.lines().enumerate() {
         if let Ok(line) = line {
             if line_number + 1 >= start_line && line_number + 1 <= end_line {
-                // Check for single-line SAFETY comments
                 if re_single_line.is_match(&line) {
                     return true;
                 }
@@ -255,15 +254,48 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
     false
 }
 
-/// Main function to start scanning the Rust code base for unsafe blocks.
 fn main() -> Result<()> {
-    let crate_dir = r"overunsafe库\存在overunsafe的rust库"; // Adjust to the directory of your crate
+    let crate_dir = r"overunsafe库\存在overunsafe的rust库";
 
     let outputted_functions = Arc::new(Mutex::new(HashSet::<(String, String)>::new()));
+    let total_functions = Arc::new(Mutex::new(0));
+    let total_unsafe_blocks = Arc::new(Mutex::new(0));
+    let total_no_safety_unsafe_blocks = Arc::new(Mutex::new(0));
 
-    process_directory(crate_dir, &outputted_functions)?;
+    process_directory(crate_dir, &outputted_functions, &total_functions, &total_unsafe_blocks, &total_no_safety_unsafe_blocks)?;
 
-    // Output to console
+    let total_functions = *total_functions.lock().unwrap();
+    let total_unsafe_blocks = *total_unsafe_blocks.lock().unwrap();
+    let total_no_safety_unsafe_blocks = *total_no_safety_unsafe_blocks.lock().unwrap();
+    let unsafe_function_ratio = if total_functions > 0 {
+        (total_unsafe_blocks as f64 / total_functions as f64) * 100.0
+    } else {
+        0.0
+    };
+    let nocommit_unsafe_function_ratio = if total_functions > 0 {
+        (total_no_safety_unsafe_blocks as f64 / total_functions as f64) * 100.0
+    } else {
+        0.0
+    };
+    let nur = if total_unsafe_blocks > 0 {
+        (total_no_safety_unsafe_blocks as f64 / total_unsafe_blocks as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    {
+        let mut log_file = LOG_FILE.lock().unwrap();
+        writeln!(log_file, "\n--- Summary ---").expect("Failed to write to log file");
+        writeln!(log_file, "Total functions: {}", total_functions).expect("Failed to write to log file");
+        writeln!(log_file, "Total unsafe blocks: {}", total_unsafe_blocks).expect("Failed to write to log file");
+        writeln!(log_file, "Total unsafe blocks without SAFETY comment: {}", total_no_safety_unsafe_blocks).expect("Failed to write to log file");
+        writeln!(log_file, "Inner Unsafe function ratio: {:.2}%", unsafe_function_ratio).expect("Failed to write to log file");
+        writeln!(log_file, "Inner Unsafe function Without //SAFETY ratio: {:.2}%", nocommit_unsafe_function_ratio).expect("Failed to write to log file");
+        writeln!(log_file, "Inner Unsafe function Without //SAFETY and total Inner Unsafe function ratio: {:.2}%", nur).expect("Failed to write to log file");
+        
+        log_file.flush().expect("Failed to flush log file");
+    }
+
     println!("Scan results have been written to scan_results.txt");
 
     Ok(())

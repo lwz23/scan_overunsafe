@@ -21341,3 +21341,11 @@ fn into_iter(mut self) -> Self::IntoIter {
 
 
 
+
+--- Summary ---
+Total functions: 10132
+Total unsafe blocks: 975
+Total unsafe blocks without SAFETY comment: 947
+Inner Unsafe function ratio: 9.62%
+Inner Unsafe function Without //SAFETY ratio: 9.35%
+Inner Unsafe function Without //SAFETY and total Inner Unsafe function ratio: 97.13%
