@@ -12,9 +12,9 @@ use regex::Regex;
 struct FunctionVisitor<'a> {
     file_path: &'a str,
     outputted_functions: &'a Arc<Mutex<HashSet<(String, String)>>>,
-    total_functions: &'a Arc<Mutex<usize>>,  // 新增：记录函数总数
-    total_unsafe_blocks: &'a Arc<Mutex<usize>>, // 新增：记录 unsafe 代码块总数
-    total_no_safety_unsafe_blocks: &'a Arc<Mutex<usize>>, // 新增：记录没有 SAFETY 注释的 unsafe 代码块数量
+    total_functions: &'a Arc<Mutex<usize>>,  // 记录函数总数
+    total_unsafe_blocks: &'a Arc<Mutex<usize>>, // 记录 unsafe 代码块总数
+    total_no_safety_unsafe_blocks: &'a Arc<Mutex<usize>>, // 记录没有 SAFETY 注释的 unsafe 代码块数量
 }
 
 impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
@@ -39,11 +39,13 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                 has_safety_comment,
                 total_unsafe_blocks: self.total_unsafe_blocks.clone(),
                 total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
+                has_unrelated_logic: false, // 新增：记录是否有不相关的逻辑
             };
 
             checker.visit_block(&node.block);
 
-            if checker.has_large_unsafe || (checker.has_unsafe && !has_safety_comment) {
+            // 只在符合潜在overunsafe标准时才打印详细信息
+            if checker.has_large_unsafe || checker.has_unrelated_logic {
                 let function_code = quote! {
                     #node
                 };
@@ -87,18 +89,20 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                         has_safety_comment,
                         total_unsafe_blocks: self.total_unsafe_blocks.clone(),
                         total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
+                        has_unrelated_logic: false, // 新增：记录是否有不相关的逻辑
                     };
 
                     checker.visit_block(&method.block);
 
-                    if checker.has_large_unsafe || (checker.has_unsafe && !has_safety_comment) {
+                    // 只在符合潜在overunsafe标准时才打印详细信息
+                    if checker.has_large_unsafe || checker.has_unrelated_logic {
                         let method_code = quote! {
                             #method
                         };
                         let formatted_code = prettyplease::unparse(&syn::parse_quote!(#method_code));
                         let output = format!(
-                            "Found method with unsafe block in {}:\nFile: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
-                            method_name, self.file_path, start_line, end_line, formatted_code
+                            "File: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
+                             self.file_path, start_line, end_line, formatted_code
                         );
 
                         {
@@ -129,8 +133,9 @@ struct UnsafeBlockChecker {
     current_file_path: String,
     current_function_name: String,
     has_safety_comment: bool,
-    total_unsafe_blocks: Arc<Mutex<usize>>, // 新增：记录 unsafe 代码块总数
-    total_no_safety_unsafe_blocks: Arc<Mutex<usize>>, // 新增：记录没有 SAFETY 注释的 unsafe 代码块数量
+    total_unsafe_blocks: Arc<Mutex<usize>>, // 记录 unsafe 代码块总数
+    total_no_safety_unsafe_blocks: Arc<Mutex<usize>>, // 记录没有 SAFETY 注释的 unsafe 代码块数量
+    has_unrelated_logic: bool, // 新增：记录是否有不相关的逻辑
 }
 
 impl<'ast> Visit<'ast> for UnsafeBlockChecker {
@@ -143,14 +148,26 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
             });
 
+            // 检查是否有与unsafe操作不相关的逻辑
+            for stmt in &unsafe_block.block.stmts {
+                if let Stmt::Expr(expr, _) = stmt {
+                    if !is_related_to_unsafe(expr) {
+                        self.has_unrelated_logic = true;
+                        break;
+                    }
+                }
+            }
+
             let output = format!(
                 "-----------------------------------------------------------------\n\
-                Checking unsafe block with {} statements, Complex: {}, With_SAFETY_comment: {}, Name: {},  File: {}\n",
+                Checking unsafe block with {} statements, Complex: {}, Unrelated Logic: {}, With_SAFETY_comment: {}, Name: {},  File: {}\nPotential Overunsafe：{}\n",
                 num_stmts,
                 has_complex_structure,
+                self.has_unrelated_logic,
                 self.has_safety_comment,
                 self.current_function_name,
                 self.current_file_path,
+                self.has_large_unsafe || self.has_unrelated_logic,
             );
 
             {
@@ -159,7 +176,8 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 log_file.flush().expect("Failed to flush log file");
             }
 
-            if num_stmts >= 5 || has_complex_structure {
+            // 判断是否为 large unsafe block
+            if num_stmts > 5 || has_complex_structure {
                 self.has_large_unsafe = true;
             }
 
@@ -184,6 +202,14 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             Stmt::Expr(expr, _) => self.visit_expr(expr),
             Stmt::Macro(mac) => self.visit_macro(&mac.mac),
         }
+    }
+}
+
+/// 判断表达式是否与unsafe操作相关
+fn is_related_to_unsafe(expr: &Expr) -> bool {
+    match expr {
+        Expr::Call(_) | Expr::MethodCall(_) | Expr::Unsafe(_) => true,
+        _ => false,
     }
 }
 
