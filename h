@@ -1,0 +1,119 @@
+[33mcommit 47936fa035f5396b5c09c16d034d7debe2f54d1d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Sat Aug 10 11:37:54 2024 +0800
+
+    添加了Summary部分，输出统计信息
+
+[33mcommit 7170c8be9b62be666cd066c706335db9cf92b051[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Sat Aug 10 11:11:52 2024 +0800
+
+    添加了对于复杂结构的检测，更改了输出的形式
+
+[33mcommit e23372092a09b6a498cf10799a6ff047b3ca0a85[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Fri Aug 9 11:52:13 2024 +0800
+
+    修改README
+
+[33mcommit 4d25d7138e856ffe835f22354fd7e2186e118bee[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Fri Aug 9 11:41:25 2024 +0800
+
+    解决了extend扫不出来的问题，更改HashSet的实现保证了只有同一文件下的同名函数才不会输出两次
+
+[33mcommit 325ba5881c1005ded3998cc431ed1e7fb92d2321[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Thu Aug 8 12:12:08 2024 +0800
+
+    添加了对于SAFETY注释的扫描，现在可以输出所有使用unsafe但是没有safety注释的函数，以及具有大块unsafe的函数
+
+[33mcommit 87b2d660d77f24520931a6eee23606ca821cd51a[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Tue Aug 6 11:20:45 2024 +0800
+
+    添加了一个目前整理的overunsafe案例整合pdf，方便阅读
+
+[33mcommit 16dbbbd316d589763413fea45a32ef416cd7ec86[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Tue Aug 6 11:18:53 2024 +0800
+
+    添加了2个存在overunsafe的rust库
+
+[33mcommit 4ea1a54ee9c01377faa042bf35b4c6f1db9b59f5[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Mon Aug 5 10:52:42 2024 +0800
+
+    更新README
+
+[33mcommit a3e22b47775295b85f7c03dd590615c6822e5ccf[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Sun Aug 4 10:47:25 2024 +0800
+
+    更新了任务，并且将overunsafe库放入了项目中，方便检测
+
+[33mcommit 0960d38f4c5e53e25176bf3601c745dbddd8a16a[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Sun Aug 4 10:42:28 2024 +0800
+
+    添加了更多rust库，结果保留在txt文件中，解决了输出存在错位的问题
+
+[33mcommit 16f9dd5a5d9a5d555dfae7802ffaefb5e062ff9c[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Fri Aug 2 16:02:55 2024 +0800
+
+    添加了更多的overunsafe代码库，发现了错位问题，更新README任务清单
+
+[33mcommit 8e592c2d721650abf88665388825af3ff42a7a9c[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Thu Aug 1 17:57:11 2024 +0800
+
+    update README.md
+
+[33mcommit 50e582f78269600fd45f8e4ae77fb9dbc3f0ec6e[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Thu Aug 1 17:44:50 2024 +0800
+
+    通过ast而不是源代码来判断是否overunsafe，输出unsafe块中大于等于5行指令或者有复杂结构的函数，同时也记录下所有存在unsafe代码块的函数名称以及unsafe块中的指令数量
+
+[33mcommit 0af50191eeee8798e711b0eb444a14bf38ebcf28[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Thu Aug 1 12:21:34 2024 +0800
+
+    just print once for same name function
+
+[33mcommit c8a4469f4818df876bf581e08883dadf3f76d7dc[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Thu Aug 1 12:17:57 2024 +0800
+
+    delete print test function
+
+[33mcommit 20b01a4b3a72f45990289eb6f9c6653a3b08cf67[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Thu Aug 1 11:53:27 2024 +0800
+
+    Fix Unsafe block content problem, print whole overunsafe function for future analysis
+
+[33mcommit 2c82c89f6520ced690bf5e076564df8f2b82af4e[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Wed Jul 31 16:51:18 2024 +0800
+
+    add print all function, and the original contents have problem
+
+[33mcommit bc620441b2f2f66a4e5b2820bd749a7a5662d51d[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Wed Jul 31 15:03:12 2024 +0800
+
+    add print overunsafe function name
+
+[33mcommit d50e8c3ae06148119b6a00172417b4f3269763e2[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Wed Jul 31 14:54:38 2024 +0800
+
+    first commit
+
+[33mcommit c2e6fc29f102fa5706d43113102430d42518739f[m
+Author: lwz23 <wenzhaoliao@ruc.edu.cn>
+Date:   Wed Jul 31 12:01:07 2024 +0800
+
+    basic scan program identify unsafe block more than 5 lines
