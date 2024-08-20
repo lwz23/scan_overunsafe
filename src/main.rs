@@ -45,7 +45,7 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
             checker.visit_block(&node.block);
 
             // 只在符合潜在overunsafe标准时才打印详细信息
-            if checker.has_large_unsafe || checker.has_unrelated_logic {
+            if (checker.has_large_unsafe || checker.has_unrelated_logic) && !checker.has_safety_comment {
                 let function_code = quote! {
                     #node
                 };
@@ -95,7 +95,7 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                     checker.visit_block(&method.block);
 
                     // 只在符合潜在overunsafe标准时才打印详细信息
-                    if checker.has_large_unsafe || checker.has_unrelated_logic {
+                    if (checker.has_large_unsafe || checker.has_unrelated_logic) && !checker.has_safety_comment {
                         let method_code = quote! {
                             #method
                         };
@@ -148,6 +148,11 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
             });
 
+            // 判断是否为 large unsafe block
+            if num_stmts >= 5 || has_complex_structure {
+                self.has_large_unsafe = true;
+            }
+
             // 检查是否有与unsafe操作不相关的逻辑
             for stmt in &unsafe_block.block.stmts {
                 if let Stmt::Expr(expr, _) = stmt {
@@ -160,25 +165,20 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
 
             let output = format!(
                 "-----------------------------------------------------------------\n\
-                Checking unsafe block with {} statements, Complex: {}, Unrelated Logic: {}, With_SAFETY_comment: {}, Name: {},  File: {}\nPotential Overunsafe：{}\n",
+                Checking unsafe block with {} statements, With_large_unsafe: {}, Unrelated Logic: {}, With_SAFETY_comment: {}, Name: {},  File: {}\nPotential Overunsafe：{}\n",
                 num_stmts,
-                has_complex_structure,
+                self.has_large_unsafe,
                 self.has_unrelated_logic,
                 self.has_safety_comment,
                 self.current_function_name,
                 self.current_file_path,
-                self.has_large_unsafe || self.has_unrelated_logic,
+                (self.has_large_unsafe || self.has_unrelated_logic) && !self.has_safety_comment,
             );
 
             {
                 let mut log_file = LOG_FILE.lock().unwrap();
                 writeln!(log_file, "{}", output).expect("Failed to write to log file");
                 log_file.flush().expect("Failed to flush log file");
-            }
-
-            // 判断是否为 large unsafe block
-            if num_stmts > 5 || has_complex_structure {
-                self.has_large_unsafe = true;
             }
 
             *self.total_unsafe_blocks.lock().unwrap() += 1; // 更新 unsafe 代码块总数
