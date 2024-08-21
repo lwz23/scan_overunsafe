@@ -6,7 +6,6 @@ use anyhow::Result;
 use syn::Pat;
 use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file, Attribute, Expr, Block, Stmt};
 use quote::quote;
-use walkdir::WalkDir;
 use regex::Regex;
 
 /// Struct to visit functions and methods in the Rust code.
@@ -229,34 +228,48 @@ fn is_related_to_unsafe(expr: &Expr, unsafe_context_vars: &HashSet<String>) -> b
     match expr {
         Expr::Call(_) | Expr::MethodCall(_) | Expr::Unsafe(_) => true,
         Expr::Path(ref path) => {
-            // 检查路径的终结是否是 `unsafe` 上下文中的变量
             if let Some(ident) = path.path.get_ident() {
                 return unsafe_context_vars.contains(ident.to_string().as_str());
             }
             false
         }
         Expr::Assign(assign) => {
-            // 如果左侧是上下文变量，右侧是与unsafe相关的表达式，也应被视为相关
             if let Expr::Path(ref path) = *assign.left {
                 if let Some(ident) = path.path.get_ident() {
-                    return unsafe_context_vars.contains(ident.to_string().as_str())
-                        && is_related_to_unsafe(&assign.right, unsafe_context_vars);
+                    // 检查赋值操作是否影响unsafe上下文变量
+                    return unsafe_context_vars.contains(ident.to_string().as_str()) ||
+                           is_related_to_unsafe(&assign.right, unsafe_context_vars);
                 }
             }
-            false
+            is_related_to_unsafe(&assign.right, unsafe_context_vars)
         }
         Expr::Binary(binary) => {
-            // 二元操作符中涉及到unsafe上下文变量时，视为相关
-            is_related_to_unsafe(&binary.left, unsafe_context_vars)
-                || is_related_to_unsafe(&binary.right, unsafe_context_vars)
+            is_related_to_unsafe(&binary.left, unsafe_context_vars) ||
+            is_related_to_unsafe(&binary.right, unsafe_context_vars)
         }
         Expr::Unary(unary) => {
-            // 单目运算符的操作对象是unsafe上下文变量时，视为相关
             is_related_to_unsafe(&unary.expr, unsafe_context_vars)
+        }
+        Expr::If(expr_if) => {
+            is_related_to_unsafe(&expr_if.cond, unsafe_context_vars) ||
+            expr_if.then_branch.stmts.iter().any(|stmt| match stmt {
+                Stmt::Expr(expr, _) => is_related_to_unsafe(expr, unsafe_context_vars),
+                _ => false,
+            }) ||
+            expr_if.else_branch.as_ref().map_or(false, |(_, else_expr)| {
+                is_related_to_unsafe(else_expr, unsafe_context_vars)
+            })
+        }
+        Expr::Loop(expr_loop) => {
+            expr_loop.body.stmts.iter().any(|stmt| match stmt {
+                Stmt::Expr(expr, _) => is_related_to_unsafe(expr, unsafe_context_vars),
+                _ => false,
+            })
         }
         _ => false,
     }
 }
+
 
 fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_potential_overunsafe: &Arc<Mutex<usize>>) -> Result<()> {
     let source_code = fs::read_to_string(file_path)?;
