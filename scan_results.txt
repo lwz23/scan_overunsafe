@@ -11133,7 +11133,9 @@ Total functions: 10132
 Total unsafe blocks: 975
 Total unsafe blocks without SAFETY comment: 947
 Total Potential Overunsafe function: 263
+Total Necessary Unsafe function: 696
 Inner Unsafe function ratio: 9.62%
 Inner Unsafe function Without //SAFETY ratio: 9.35%
 Inner Unsafe function Without //SAFETY and total Inner Unsafe function ratio: 97.13%
 Potential Overunsafe function ratio: 2.60%
+Necessary Unsafe function ratio: 6.87%
