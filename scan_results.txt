@@ -1907,19 +1907,8 @@ Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_bit_set,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Start Line: 247, End Line: 249
-/// Returns `true` if the `n`th bit of `self` is set to 1, `false` otherwise.
-#[corresponds(BN_is_bit_set)]
-#[allow(clippy::useless_conversion)]
-pub fn is_bit_set(&self, n: i32) -> bool {
-    unsafe { ffi::BN_is_bit_set(self.as_ptr(), n.into()) == 1 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_bit_set,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: mask_bits,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
@@ -1962,33 +1951,12 @@ Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_negative,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Start Line: 334, End Line: 336
-/// Returns `true` if `self` is negative.
-#[corresponds(BN_is_negative)]
-pub fn is_negative(&self) -> bool {
-    unsafe { BN_is_negative(self.as_ptr()) == 1 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_negative,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_odd,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Start Line: 348, End Line: 350
-/// Returns `true` is `self` is odd.
-#[corresponds(BN_is_odd)]
-#[cfg(any(ossl110, boringssl, libressl350))]
-pub fn is_odd(&self) -> bool {
-    unsafe { ffi::BN_is_odd(self.as_ptr()) == 1 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_odd,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: num_bits,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
@@ -2146,40 +2114,12 @@ Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_const_time,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Start Line: 911, End Line: 916
-/// Returns true if `self` is in const time mode.
-#[corresponds(BN_get_flags)]
-#[cfg(ossl110)]
-pub fn is_const_time(&self) -> bool {
-    unsafe {
-        let ret = ffi::BN_get_flags(self.as_ptr(), ffi::BN_FLG_CONSTTIME);
-        ret == ffi::BN_FLG_CONSTTIME
-    }
-}
-
-
+Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_const_time,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_secure,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Start Line: 921, End Line: 926
-/// Returns true if `self` was created with [`BigNum::new_secure`].
-#[corresponds(BN_get_flags)]
-#[cfg(ossl110)]
-pub fn is_secure(&self) -> bool {
-    unsafe {
-        let ret = ffi::BN_get_flags(self.as_ptr(), ffi::BN_FLG_SECURE);
-        ret == ffi::BN_FLG_SECURE
-    }
-}
-
-
+Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_secure,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: from_u32,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
@@ -3958,21 +3898,8 @@ Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_infinity,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ec.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ec.rs
-Start Line: 611, End Line: 616
-/// Checks if point is infinity
-#[corresponds(EC_POINT_is_at_infinity)]
-pub fn is_infinity(&self, group: &EcGroupRef) -> bool {
-    unsafe {
-        let res = ffi::EC_POINT_is_at_infinity(group.as_ptr(), self.as_ptr());
-        res == 1
-    }
-}
-
-
+Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_infinity,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ec.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_on_curve,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ec.rs
@@ -4406,19 +4333,8 @@ Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: enabled,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\fips.rs
-Potential Overunsafe：true
-
-Found function with unsafe block in enabled:
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\fips.rs
-Start Line: 19, End Line: 21
-/// Determines if the library is running in the FIPS 140-2 mode of operation.
-#[corresponds(FIPS_mode)]
-pub fn enabled() -> bool {
-    unsafe { ffi::FIPS_mode() != 0 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: enabled,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\fips.rs
+Potential Overunsafe：false
 
 Processing file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\hash.rs
 -----------------------------------------------------------------
@@ -4671,8 +4587,8 @@ pub fn finish_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
 
 
 -----------------------------------------------------------------
-Checking unsafe block with 5 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: clone,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\hash.rs
-Potential Overunsafe：true
+Checking unsafe block with 5 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: clone,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\hash.rs
+Potential Overunsafe：false
 
 File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\hash.rs
 Start Line: 348, End Line: 362
@@ -5645,23 +5561,8 @@ pub fn security_bits(&self) -> u32 {
 
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: public_eq,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey.rs
-Start Line: 251, End Line: 260
-/// Compares the public component of this key with another.
-#[corresponds(EVP_PKEY_cmp)]
-pub fn public_eq<U>(&self, other: &PKeyRef<U>) -> bool
-where
-    U: HasPublic,
-{
-    let res = unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 };
-    let _ = ErrorStack::get();
-    res
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: public_eq,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 6 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: raw_public_key,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey.rs
@@ -5894,8 +5795,8 @@ Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 6 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: private_key_from_pkcs8,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey.rs
-Potential Overunsafe：true
+Checking unsafe block with 6 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: private_key_from_pkcs8,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey.rs
+Potential Overunsafe：false
 
 File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey.rs
 Start Line: 676, End Line: 689
@@ -7951,28 +7852,8 @@ Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 3 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: set_ex_data_inner,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Start Line: 1580, End Line: 1592
-fn set_ex_data_inner<T>(&mut self, index: Index<SslContext, T>, data: T) -> *mut c_void {
-    match self.ex_data_mut(index) {
-        Some(v) => {
-            *v = data;
-            (v as *mut T).cast()
-        }
-        _ => {
-            unsafe {
-                let data = Box::into_raw(Box::new(data)) as *mut c_void;
-                ffi::SSL_CTX_set_ex_data(self.as_ptr(), index.as_raw(), data);
-                data
-            }
-        }
-    }
-}
-
-
+Checking unsafe block with 3 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: set_ex_data_inner,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: ex_data_mut,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
@@ -8418,18 +8299,8 @@ Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: session_reused,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Start Line: 2894, End Line: 2896
-/// Determines if the session provided to `set_session` was successfully reused.
-#[corresponds(SSL_session_reused)]
-pub fn session_reused(&self) -> bool {
-    unsafe { ffi::SSL_session_reused(self.as_ptr()) != 0 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: session_reused,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: set_status_type,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
@@ -8485,18 +8356,8 @@ Checking unsafe block with 4 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_server,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Start Line: 2959, End Line: 2961
-/// Determines if this `Ssl` is configured for server-side or client-side use.
-#[corresponds(SSL_is_server)]
-pub fn is_server(&self) -> bool {
-    unsafe { SSL_is_server(self.as_ptr()) != 0 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_server,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: finished,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
@@ -8507,38 +8368,12 @@ Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Log
 Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: is_init_finished,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Start Line: 3055, End Line: 3057
-/// Determines if the initial handshake has been completed.
-#[corresponds(SSL_is_init_finished)]
-#[cfg(ossl110)]
-pub fn is_init_finished(&self) -> bool {
-    unsafe { ffi::SSL_is_init_finished(self.as_ptr()) != 0 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: is_init_finished,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
-Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: client_hello_isv2,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Start Line: 3066, End Line: 3068
-/// Determines if the client's hello message is in the SSLv2 format.
-///
-/// This can only be used inside of the client hello callback. Otherwise, `false` is returned.
-///
-/// Requires OpenSSL 1.1.1 or newer.
-#[corresponds(SSL_client_hello_isv2)]
-#[cfg(ossl111)]
-pub fn client_hello_isv2(&self) -> bool {
-    unsafe { ffi::SSL_client_hello_isv2(self.as_ptr()) != 0 }
-}
-
-
+Checking unsafe block with 1 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: client_hello_isv2,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 2 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: client_hello_legacy_version,  File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
@@ -10794,27 +10629,8 @@ pub fn insert_many<I: IntoIterator<Item = A::Item>>(
 
 
 -----------------------------------------------------------------
-Checking unsafe block with 4 statements, With_large_unsafe: false, Unrelated Logic: true, With_SAFETY_comment: false, Name: into_vec,  File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Potential Overunsafe：true
-
-File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Start Line: 860, End Line: 871
-/// Convert a SmallVec to a Vec, without reallocating if the SmallVec has already spilled onto
-/// the heap.
-pub fn into_vec(self) -> Vec<A::Item> {
-    if self.spilled() {
-        unsafe {
-            let (ptr, len) = self.data.heap();
-            let v = Vec::from_raw_parts(ptr, len, self.capacity);
-            mem::forget(self);
-            v
-        }
-    } else {
-        self.into_iter().collect()
-    }
-}
-
-
+Checking unsafe block with 4 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: into_vec,  File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Potential Overunsafe：false
 
 -----------------------------------------------------------------
 Checking unsafe block with 3 statements, With_large_unsafe: false, Unrelated Logic: false, With_SAFETY_comment: false, Name: into_inner,  File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
@@ -11316,8 +11132,8 @@ fn into_iter(mut self) -> Self::IntoIter {
 Total functions: 10132
 Total unsafe blocks: 975
 Total unsafe blocks without SAFETY comment: 947
-Total Potential Overunsafe function: 277
+Total Potential Overunsafe function: 263
 Inner Unsafe function ratio: 9.62%
 Inner Unsafe function Without //SAFETY ratio: 9.35%
 Inner Unsafe function Without //SAFETY and total Inner Unsafe function ratio: 97.13%
-Potential Overunsafe function ratio: 2.73%
+Potential Overunsafe function ratio: 2.60%

@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
 use std::sync::{Arc, Mutex};
 use anyhow::Result;
+use syn::Pat;
 use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file, Attribute, Expr, Block, Stmt};
 use quote::quote;
 use walkdir::WalkDir;
@@ -155,10 +156,22 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
             });
 
-            // 检查是否有与unsafe操作不相关的逻辑
+            // 创建一个集合，用来保存与 unsafe 相关的变量
+            let mut unsafe_context_vars = HashSet::new();
+
+            // 先遍历一次所有语句，找到所有定义的变量
+            for stmt in &unsafe_block.block.stmts {
+                if let Stmt::Local(local) = stmt {
+                    if let Pat::Ident(pat_ident) = &local.pat {
+                        unsafe_context_vars.insert(pat_ident.ident.to_string());
+                    }
+                }
+            }
+
+            // 检查是否有与 unsafe 操作不相关的逻辑
             for stmt in &unsafe_block.block.stmts {
                 if let Stmt::Expr(expr, _) = stmt {
-                    if !is_related_to_unsafe(expr) {
+                    if !is_related_to_unsafe(expr, &unsafe_context_vars) {
                         self.has_unrelated_logic = true;
                         break;
                     }
@@ -212,10 +225,35 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
     }
 }
 
-/// 判断表达式是否与unsafe操作相关
-fn is_related_to_unsafe(expr: &Expr) -> bool {
+fn is_related_to_unsafe(expr: &Expr, unsafe_context_vars: &HashSet<String>) -> bool {
     match expr {
         Expr::Call(_) | Expr::MethodCall(_) | Expr::Unsafe(_) => true,
+        Expr::Path(ref path) => {
+            // 检查路径的终结是否是 `unsafe` 上下文中的变量
+            if let Some(ident) = path.path.get_ident() {
+                return unsafe_context_vars.contains(ident.to_string().as_str());
+            }
+            false
+        }
+        Expr::Assign(assign) => {
+            // 如果左侧是上下文变量，右侧是与unsafe相关的表达式，也应被视为相关
+            if let Expr::Path(ref path) = *assign.left {
+                if let Some(ident) = path.path.get_ident() {
+                    return unsafe_context_vars.contains(ident.to_string().as_str())
+                        && is_related_to_unsafe(&assign.right, unsafe_context_vars);
+                }
+            }
+            false
+        }
+        Expr::Binary(binary) => {
+            // 二元操作符中涉及到unsafe上下文变量时，视为相关
+            is_related_to_unsafe(&binary.left, unsafe_context_vars)
+                || is_related_to_unsafe(&binary.right, unsafe_context_vars)
+        }
+        Expr::Unary(unary) => {
+            // 单目运算符的操作对象是unsafe上下文变量时，视为相关
+            is_related_to_unsafe(&unary.expr, unsafe_context_vars)
+        }
         _ => false,
     }
 }
