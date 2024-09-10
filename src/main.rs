@@ -344,7 +344,7 @@ lazy_static::lazy_static! {
 }
 
 fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> bool {
-    let re_single_line = Regex::new(r"//\s*SAFETY:").unwrap();
+    let re_single_line = Regex::new(r"(?i)//\s*safety:").unwrap(); // (?i) 使匹配大小写不敏感
     let file = File::open(file_path).expect("Failed to open file");
     let reader = BufReader::new(file);
 
@@ -359,6 +359,7 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
     }
     false
 }
+
 
 fn main() -> Result<()> {
     let crate_dir = r"overunsafe库\存在overunsafe的rust库";
