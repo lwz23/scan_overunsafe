@@ -163,35 +163,15 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
 
             let num_stmts = unsafe_block.block.stmts.len();
 
-            // Check for `set_len`, `ptr::copy`, or `ptr::copy_nonoverlapping` within unsafe blocks
+            // Check for overunsafe functions in unsafe blocks
             let contains_overunsafe_fn = unsafe_block.block.stmts.iter().any(|stmt| {
-                if let Stmt::Expr(expr, _) = stmt {
-                    match expr {
-                        // Method calls like set_len, get_unchecked, etc.
-                        Expr::MethodCall(method_call) => {
-                            let method_name = method_call.method.to_string();
-                            method_name == "set_len" ||
-                            method_name == "get_unchecked" || method_name == "get_unchecked_mut"
-                        },
-                        // Path checks for libc::strlen, CString::from_vec_unchecked, etc.
-                        Expr::Path(path) => {
-                            let path_ident = path.path.segments.last().unwrap().ident.to_string();
-                            path_ident == "copy" || path_ident == "copy_nonoverlapping" ||
-                            path_ident == "from_vec_unchecked" ||
-                            path_ident == "strlen" ||
-                            path_ident == "from_utf8_unchecked" || path_ident == "from_utf8_unchecked_mut" ||
-                            path_ident == "from_u32_unchecked"
-                        },
-                        _ => false,
-                    }
-                } else {
-                    false
-                }
+                // Traverse each statement within the unsafe block
+                check_for_overunsafe(stmt)
             });
 
-            // If `set_len`, `ptr::copy`, or `ptr::copy_nonoverlapping`.... is found, mark the function as "overunsafe"
+            // If any overunsafe function is found, mark the function as "overunsafe"
             if contains_overunsafe_fn {
-                self.has_overunsafe = true; // Mark this unsafe block as overunsafe
+                self.has_overunsafe = true;
 
                 let output = format!(
                     "Overunsafe detected in function: {}, file: {}",
@@ -205,9 +185,9 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 }
             }
 
-            *self.total_unsafe_blocks.lock().unwrap() += 1; 
+            *self.total_unsafe_blocks.lock().unwrap() += 1;
             if !self.has_safety_comment {
-                *self.total_no_safety_unsafe_blocks.lock().unwrap() += 1; 
+                *self.total_no_safety_unsafe_blocks.lock().unwrap() += 1;
             }
 
             let output = format!(
@@ -240,6 +220,60 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             Stmt::Expr(expr, _) => self.visit_expr(expr),
             Stmt::Macro(mac) => self.visit_macro(&mac.mac),
         }
+    }
+}
+
+
+fn check_for_overunsafe(stmt: &Stmt) -> bool {
+    if let Stmt::Expr(expr, _) = stmt {
+        match expr {
+            // Check for method calls like set_len, get_unchecked, etc.
+            Expr::MethodCall(method_call) => {
+                let method_name = method_call.method.to_string();
+                let args: Vec<String> = method_call.args.iter()
+                    .map(|arg| quote::quote!(#arg).to_string())
+                    .collect();
+                
+                let call = format!("{}({})", method_name, args.join(", "));
+
+                // Check for specific unsafe methods
+                method_name == "set_len" || 
+                method_name == "get_unchecked" || method_name == "get_unchecked_mut"
+            },
+            // Check for path calls like ptr::copy_nonoverlapping, CString::from_vec_unchecked, etc.
+            Expr::Call(call_expr) => {
+                if let Expr::Path(path) = &*call_expr.func {
+                    let func_name = path.path.segments.iter()
+                        .map(|seg| seg.ident.to_string())
+                        .collect::<Vec<String>>()
+                        .join("::");
+
+                    let args: Vec<String> = call_expr.args.iter()
+                        .map(|arg| quote::quote!(#arg).to_string())
+                        .collect();
+
+                    let call = format!("{}({})", func_name, args.join(", "));
+
+                    // Check for specific unsafe function calls
+                    func_name.contains("ptr::copy_nonoverlapping" ) ||
+                    func_name.contains("ptr::copy")  ||
+                    func_name.contains("from_utf8_unchecked") ||
+                    func_name.contains("from_utf8_unchecked_mut") ||
+                    func_name.contains("char::from_u32_unchecked") ||
+                    func_name.contains("CString::from_vec_unchecked") ||
+                    func_name.contains("libc::strlen") 
+                } else {
+                    false
+                }
+            },
+            // Recursively check within blocks
+            Expr::Block(block_expr) => {
+                block_expr.block.stmts.iter().any(|stmt| check_for_overunsafe(stmt))
+            },
+            _ => false,
+        }
+    } else {
+        false
     }
 }
 

@@ -312,7 +312,22 @@ Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05e
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\src\search\refmap.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\src\source.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\src\state.rs
-Checking unsafe block with 1 statements, overunsafe: false, function: from_bytes, file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\src\state.rs
+Overunsafe detected in function: from_bytes, file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\src\state.rs
+Checking unsafe block with 1 statements, overunsafe: true, function: from_bytes, file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\src\state.rs
+File: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\src\state.rs
+Start Line: 19, End Line: 27
+/// Keep `input` as our value.
+pub fn from_bytes(input: &'a [u8]) -> Self {
+    Self(
+        KStringRef::from_ref(
+            #[allow(unsafe_code)]
+            unsafe { std::str::from_utf8_unchecked(input) },
+        ),
+    )
+}
+
+
+
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\tests\assignment\mod.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\tests\attributes.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-attributes\tests\parse\mod.rs
@@ -562,7 +577,69 @@ Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05e
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\pipeline\mod.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\pipeline\util.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\encode_to_git.rs
-Checking unsafe block with 1 statements, overunsafe: false, function: encode_to_git, file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\encode_to_git.rs
+Overunsafe detected in function: encode_to_git, file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\encode_to_git.rs
+Checking unsafe block with 1 statements, overunsafe: true, function: encode_to_git, file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\encode_to_git.rs
+Found function with unsafe block in encode_to_git:
+File: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\encode_to_git.rs
+Start Line: 32, End Line: 80
+/// Decode `src` according to `src_encoding` to `UTF-8` for storage in git and place it in `buf`.
+/// Note that the encoding is always applied, there is no conditional even if `src_encoding` already is `UTF-8`.
+pub fn encode_to_git(
+    src: &[u8],
+    src_encoding: &'static encoding_rs::Encoding,
+    buf: &mut Vec<u8>,
+    round_trip: RoundTripCheck,
+) -> Result<(), Error> {
+    let mut decoder = src_encoding.new_decoder_with_bom_removal();
+    let buf_len = decoder
+        .max_utf8_buffer_length_without_replacement(src.len())
+        .ok_or(Error::Overflow {
+            input_len: src.len(),
+        })?;
+    buf.clear();
+    buf.resize(buf_len, 0);
+    let (res, read, written) = decoder
+        .decode_to_utf8_without_replacement(src, buf, true);
+    match res {
+        DecoderResult::InputEmpty => {
+            assert!(
+                buf_len >= written,
+                "encoding_rs estimates the maximum amount of bytes written correctly"
+            );
+            assert_eq!(read, src.len(), "input buffer should be fully consumed");
+            buf.truncate(written);
+        }
+        DecoderResult::OutputFull => {
+            unreachable!(
+                "we assure that the output buffer is big enough as per the encoder's estimate"
+            )
+        }
+        DecoderResult::Malformed(_, _) => {
+            return Err(Error::Malformed {
+                encoding: src_encoding.name(),
+            });
+        }
+    }
+    match round_trip {
+        RoundTripCheck::Fail => {
+            #[allow(unsafe_code)]
+            let str = unsafe { std::str::from_utf8_unchecked(buf) };
+            let (should_equal_src, _actual_encoding, _had_errors) = src_encoding
+                .encode(str);
+            if should_equal_src != src {
+                return Err(Error::RoundTrip {
+                    src_encoding: src_encoding.name(),
+                    dest_encoding: "UTF-8",
+                });
+            }
+        }
+        RoundTripCheck::Skip => {}
+    }
+    Ok(())
+}
+
+
+
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\encode_to_worktree.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\encoding.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\gix-filter\src\worktree\mod.rs
@@ -1295,6 +1372,58 @@ Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05e
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\src\uni.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\tests\tools\src\lib.rs
 Processing file: overunsafe库\存在overunsafe的rust库\gitoxide-a807dd1ffb05efd177700d065095249e6c4b3c68\tests\tools\src\main.rs
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\build.rs
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\examples\cache.rs
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\examples\cpu.rs
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\examples\topology.rs
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\examples\tsc_frequency.rs
+Checking unsafe block with 1 statements, overunsafe: false, function: main, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\examples\tsc_frequency.rs
+Checking unsafe block with 1 statements, overunsafe: false, function: main, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\examples\tsc_frequency.rs
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\bin\cpuid.rs
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+Checking unsafe block with 1 statements, overunsafe: false, function: cpuid_count, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+Checking unsafe block with 1 statements, overunsafe: false, function: as_bytes, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+Overunsafe detected in function: as_string, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+Checking unsafe block with 4 statements, overunsafe: true, function: as_string, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+Start Line: 596, End Line: 603
+/// Return vendor identification as human readable string.
+pub fn as_string<'a>(&'a self) -> &'a str {
+    unsafe {
+        let brand_string_start = self as *const VendorInfo as *const u8;
+        let slice = slice::from_raw_parts(brand_string_start, 3 * 4);
+        let byte_array: &'a [u8] = transmute(slice);
+        str::from_utf8_unchecked(byte_array)
+    }
+}
+
+
+
+Overunsafe detected in function: processor_brand_string, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+Checking unsafe block with 5 statements, overunsafe: true, function: processor_brand_string, file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\lib.rs
+Start Line: 4153, End Line: 4170
+/// Retrieve processor brand string.
+pub fn processor_brand_string<'a>(&'a self) -> Option<&'a str> {
+    if self.leaf_is_supported(EAX_EXTENDED_BRAND_STRING) {
+        Some(unsafe {
+            let brand_string_start = &self.data[2] as *const CpuIdResult as *const u8;
+            let mut slice = slice::from_raw_parts(brand_string_start, 3 * 4 * 4);
+            match slice.iter().position(|&x| x == 0) {
+                Some(index) => slice = slice::from_raw_parts(brand_string_start, index),
+                None => {}
+            }
+            let byte_array: &'a [u8] = transmute(slice);
+            str::from_utf8_unchecked(byte_array)
+        })
+    } else {
+        None
+    }
+}
+
+
+
+Processing file: overunsafe库\存在overunsafe的rust库\rust-cpuid-72492c8c4ecaa2d18b2ab43471272325ee80c755\src\tests.rs
 Processing file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\build.rs
 Processing file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\examples\mk_certs.rs
 Processing file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\aes.rs
@@ -1738,7 +1867,33 @@ Checking unsafe block with 2 statements, overunsafe: false, function: rsa_paddin
 Checking unsafe block with 1 statements, overunsafe: false, function: set_rsa_padding, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: set_rsa_mgf1_md, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: set_rsa_oaep_md, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
-Checking unsafe block with 3 statements, overunsafe: false, function: set_rsa_oaep_label, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
+Overunsafe detected in function: set_rsa_oaep_label, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
+Checking unsafe block with 3 statements, overunsafe: true, function: set_rsa_oaep_label, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
+File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
+Start Line: 170, End Line: 186
+/// Sets the RSA OAEP label.
+///
+/// This is only useful for RSA keys.
+///
+/// This corresponds to [`EVP_PKEY_CTX_set0_rsa_oaep_label`].
+///
+/// [`EVP_PKEY_CTX_set0_rsa_oaep_label`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set0_rsa_oaep_label.html
+#[cfg(any(ossl102, libressl310))]
+pub fn set_rsa_oaep_label(&mut self, label: &[u8]) -> Result<(), ErrorStack> {
+    unsafe {
+        let p = cvt_p(ffi::OPENSSL_malloc(label.len() as _))?;
+        ptr::copy_nonoverlapping(label.as_ptr(), p as *mut u8, label.len());
+        cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(self.pctx, p, label.len() as c_int))
+            .map(|_| ())
+            .map_err(|e| {
+                ffi::OPENSSL_free(p);
+                e
+            })
+    }
+}
+
+
+
 Checking unsafe block with 1 statements, overunsafe: false, function: encrypt, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: encrypt_len, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: decrypt, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\encrypt.rs
@@ -1910,7 +2065,34 @@ Checking unsafe block with 1 statements, overunsafe: false, function: set_rsa_pa
 Checking unsafe block with 1 statements, overunsafe: false, function: set_rsa_pss_saltlen, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: set_rsa_mgf1_md, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: set_rsa_oaep_md, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
-Checking unsafe block with 5 statements, overunsafe: false, function: set_rsa_oaep_label, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
+Overunsafe detected in function: set_rsa_oaep_label, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
+Checking unsafe block with 5 statements, overunsafe: true, function: set_rsa_oaep_label, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
+File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
+Start Line: 522, End Line: 542
+/// Sets the RSA OAEP label.
+///
+/// This is only useful for RSA keys.
+#[corresponds(EVP_PKEY_CTX_set0_rsa_oaep_label)]
+#[cfg(any(ossl102, libressl310, boringssl))]
+pub fn set_rsa_oaep_label(&mut self, label: &[u8]) -> Result<(), ErrorStack> {
+    use crate::LenType;
+    let len = LenType::try_from(label.len()).unwrap();
+    unsafe {
+        let p = ffi::OPENSSL_malloc(label.len() as _);
+        ptr::copy_nonoverlapping(label.as_ptr(), p as *mut _, label.len());
+        let r = cvt(
+            ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(self.as_ptr(), p as *mut _, len),
+        );
+        if r.is_err() {
+            ffi::OPENSSL_free(p);
+        }
+        r?;
+    }
+    Ok(())
+}
+
+
+
 Checking unsafe block with 1 statements, overunsafe: false, function: set_keygen_cipher, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: set_keygen_mac_key, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: set_hkdf_md, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\pkey_ctx.rs
@@ -2116,7 +2298,35 @@ Checking unsafe block with 1 statements, overunsafe: false, function: session_re
 Checking unsafe block with 1 statements, overunsafe: false, function: set_status_type, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: extms_support, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
 Checking unsafe block with 3 statements, overunsafe: false, function: ocsp_status, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
-Checking unsafe block with 4 statements, overunsafe: false, function: set_ocsp_status, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Overunsafe detected in function: set_ocsp_status, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Checking unsafe block with 4 statements, overunsafe: true, function: set_ocsp_status, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
+Start Line: 2939, End Line: 2955
+/// Sets the OCSP response to be returned to the client.
+#[corresponds(SSL_set_tlsext_status_oscp_resp)]
+#[cfg(not(boringssl))]
+pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
+    unsafe {
+        assert!(response.len() <= c_int::MAX as usize);
+        let p = cvt_p(ffi::OPENSSL_malloc(response.len() as _))?;
+        ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
+        cvt(
+                ffi::SSL_set_tlsext_status_ocsp_resp(
+                    self.as_ptr(),
+                    p as *mut c_uchar,
+                    response.len() as c_long,
+                ) as c_int,
+            )
+            .map(|_| ())
+            .map_err(|e| {
+                ffi::OPENSSL_free(p);
+                e
+            })
+    }
+}
+
+
+
 Checking unsafe block with 1 statements, overunsafe: false, function: is_server, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: finished, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: peer_finished, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\ssl\mod.rs
@@ -2163,7 +2373,19 @@ Checking unsafe block with 2 statements, overunsafe: false, function: get_mut, f
 Checking unsafe block with 3 statements, overunsafe: false, function: push, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\stack.rs
 Checking unsafe block with 2 statements, overunsafe: false, function: pop, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\stack.rs
 Processing file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\string.rs
-Checking unsafe block with 2 statements, overunsafe: false, function: deref, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\string.rs
+Overunsafe detected in function: deref, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\string.rs
+Checking unsafe block with 2 statements, overunsafe: true, function: deref, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\string.rs
+File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\string.rs
+Start Line: 50, End Line: 55
+fn deref(&self) -> &str {
+    unsafe {
+        let slice = CStr::from_ptr(self.as_ptr()).to_bytes();
+        str::from_utf8_unchecked(slice)
+    }
+}
+
+
+
 Processing file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\symm.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: from_nid, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\symm.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: nid, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\symm.rs
@@ -2517,11 +2739,81 @@ pub fn drain(&mut self) -> Drain<A::Item> {
 
 Checking unsafe block with 5 statements, overunsafe: false, function: pop, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 5 statements, overunsafe: false, function: grow, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Checking unsafe block with 5 statements, overunsafe: false, function: shrink_to_fit, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: shrink_to_fit, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Checking unsafe block with 5 statements, overunsafe: true, function: shrink_to_fit, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Start Line: 710, End Line: 726
+/// Shrink the capacity of the vector as much as possible.
+///
+/// When possible, this will move data from an external heap buffer to the vector's inline
+/// storage.
+pub fn shrink_to_fit(&mut self) {
+    if !self.spilled() {
+        return;
+    }
+    let len = self.len();
+    if self.inline_size() >= len {
+        unsafe {
+            let (ptr, len) = self.data.heap();
+            self.data = SmallVecData::from_inline(mem::uninitialized());
+            ptr::copy_nonoverlapping(ptr, self.data.inline_mut().ptr_mut(), len);
+            deallocate(ptr, self.capacity);
+            self.capacity = len;
+        }
+    } else if self.capacity() > len {
+        self.grow(len);
+    }
+}
+
+
+
 Checking unsafe block with 2 statements, overunsafe: false, function: truncate, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: swap_remove, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Checking unsafe block with 8 statements, overunsafe: false, function: remove, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Checking unsafe block with 7 statements, overunsafe: false, function: insert, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: remove, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Checking unsafe block with 8 statements, overunsafe: true, function: remove, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Start Line: 782, End Line: 793
+/// Remove and return the element at position `index`, shifting all elements after it to the
+/// left.
+///
+/// Panics if `index` is out of bounds.
+pub fn remove(&mut self, index: usize) -> A::Item {
+    unsafe {
+        let (mut ptr, len_ptr, _) = self.triple_mut();
+        let len = *len_ptr;
+        assert!(index < len);
+        *len_ptr = len - 1;
+        ptr = ptr.offset(index as isize);
+        let item = ptr::read(ptr);
+        ptr::copy(ptr.offset(1), ptr, len - index - 1);
+        item
+    }
+}
+
+
+
+Overunsafe detected in function: insert, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Checking unsafe block with 7 statements, overunsafe: true, function: insert, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Start Line: 798, End Line: 810
+/// Insert an element at position `index`, shifting all elements after it to the right.
+///
+/// Panics if `index` is out of bounds.
+pub fn insert(&mut self, index: usize, element: A::Item) {
+    self.reserve(1);
+    unsafe {
+        let (mut ptr, len_ptr, _) = self.triple_mut();
+        let len = *len_ptr;
+        assert!(index <= len);
+        *len_ptr = len + 1;
+        ptr = ptr.offset(index as isize);
+        ptr::copy(ptr, ptr.offset(1), len - index);
+        ptr::write(ptr, element);
+    }
+}
+
+
+
 Overunsafe detected in function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 9 statements, overunsafe: true, function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
@@ -2575,7 +2867,37 @@ pub fn insert_many<I: IntoIterator<Item = A::Item>>(
 Checking unsafe block with 4 statements, overunsafe: false, function: into_vec, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 3 statements, overunsafe: false, function: into_inner, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: dedup_by, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Checking unsafe block with 3 statements, overunsafe: false, function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Checking unsafe block with 3 statements, overunsafe: true, function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Start Line: 1036, End Line: 1056
+/// Copy the elements from a slice into a new `SmallVec`.
+///
+/// For slices of `Copy` types, this is more efficient than `SmallVec::from(slice)`.
+pub fn from_slice(slice: &[A::Item]) -> Self {
+    let len = slice.len();
+    if len <= A::size() {
+        SmallVec {
+            capacity: len,
+            data: SmallVecData::from_inline(unsafe {
+                let mut data: A = mem::uninitialized();
+                ptr::copy_nonoverlapping(slice.as_ptr(), data.ptr_mut(), len);
+                data
+            }),
+        }
+    } else {
+        let mut b = slice.to_vec();
+        let (ptr, cap) = (b.as_mut_ptr(), b.capacity());
+        mem::forget(b);
+        SmallVec {
+            capacity: cap,
+            data: SmallVecData::from_heap(ptr, len),
+        }
+    }
+}
+
+
+
 Overunsafe detected in function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 5 statements, overunsafe: true, function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
@@ -2644,8 +2966,46 @@ pub fn drain(&mut self) -> Drain<A::Item> {
 
 Checking unsafe block with 1 statements, overunsafe: false, function: truncate, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: swap_remove, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
-Checking unsafe block with 5 statements, overunsafe: false, function: remove, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
-Checking unsafe block with 4 statements, overunsafe: false, function: insert, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Overunsafe detected in function: remove, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Checking unsafe block with 5 statements, overunsafe: true, function: remove, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Start Line: 517, End Line: 526
+/// Remove and return the element at position `index`, shifting all elements after it to the
+/// left.
+///
+/// Panics if `index` is out of bounds.
+pub fn remove(&mut self, index: usize) -> A::Item {
+    assert!(index < self.len());
+    unsafe {
+        self.length -= 1;
+        let ptr = self.as_mut_ptr().padd(index);
+        let item = ptr::read(ptr);
+        ptr::copy(ptr.offset(1), ptr, self.length - index);
+        item
+    }
+}
+
+
+
+Overunsafe detected in function: insert, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Checking unsafe block with 4 statements, overunsafe: true, function: insert, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Start Line: 531, End Line: 539
+/// Insert an element at position `index`, shifting all elements after it to the right.
+///
+/// Panics if `index` is out of bounds.
+pub fn insert(&mut self, index: usize, element: A::Item) {
+    assert!(index < self.len() && self.len() < self.capacity());
+    unsafe {
+        let ptr = self.as_mut_ptr().padd(index);
+        ptr::copy(ptr, ptr.offset(1), self.length - index);
+        ptr::write(ptr, element);
+        self.length += 1;
+    }
+}
+
+
+
 Overunsafe detected in function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 9 statements, overunsafe: true, function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
@@ -2694,7 +3054,27 @@ pub fn insert_many<I: iter::IntoIterator<Item = A::Item>>(
 
 Checking unsafe block with 3 statements, overunsafe: false, function: into_inner, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: dedup_by, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
-Checking unsafe block with 3 statements, overunsafe: false, function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Overunsafe detected in function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Checking unsafe block with 3 statements, overunsafe: true, function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Start Line: 672, End Line: 682
+/// Copy the elements from a slice into a new `StackVec`.
+///
+/// For slices of `Copy` types, this is more efficient than `StackVec::from(slice)`.
+pub fn from_slice(slice: &[A::Item]) -> Self {
+    assert!(slice.len() <= A::size());
+    StackVec {
+        length: slice.len(),
+        data: unsafe {
+            let mut data: A = mem::uninitialized();
+            ptr::copy_nonoverlapping(slice.as_ptr(), data.ptr_mut(), slice.len());
+            mem::ManuallyDrop::new(data)
+        },
+    }
+}
+
+
+
 Overunsafe detected in function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 6 statements, overunsafe: true, function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
@@ -2770,8 +3150,8 @@ fn into_iter(mut self) -> Self::IntoIter {
 
 
 --- Summary ---
-Total functions: 10132
-Total unsafe blocks: 975
-Total unsafe blocks without SAFETY comment: 947
-Total Potential Overunsafe function: 14
-Potential Overunsafe function ratio: 0.14%
+Total functions: 10344
+Total unsafe blocks: 981
+Total unsafe blocks without SAFETY comment: 953
+Total Potential Overunsafe function: 29
+Potential Overunsafe function ratio: 0.28%
