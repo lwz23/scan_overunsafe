@@ -15,7 +15,7 @@ struct FunctionVisitor<'a> {
     total_functions: &'a Arc<Mutex<usize>>,  // 记录函数总数
     total_unsafe_blocks: &'a Arc<Mutex<usize>>, // 记录 unsafe 代码块总数
     total_no_safety_unsafe_blocks: &'a Arc<Mutex<usize>>, // 记录没有 SAFETY 注释的 unsafe 代码块数量
-    total_potential_overunsafe: &'a Arc<Mutex<usize>>, // 记录 Potential Overunsafe 案例数量
+    total_overunsafe: &'a Arc<Mutex<usize>>, // 记录 Potential Overunsafe 案例数量
 }
 
 impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
@@ -44,18 +44,18 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
 
             checker.visit_block(&node.block);
 
-            let is_potential_overunsafe = checker.has_overunsafe;
+            let is_overunsafe = checker.has_overunsafe;
 
             if checker.has_unsafe {
-                if is_potential_overunsafe {
-                    *self.total_potential_overunsafe.lock().unwrap() += 1; // 更新 Potential Overunsafe 案例数量
+                if is_overunsafe {
+                    *self.total_overunsafe.lock().unwrap() += 1; // 更新 Potential Overunsafe 案例数量
                 }
                
             }
             
 
             // 只在符合潜在overunsafe标准时才打印详细信息
-            if is_potential_overunsafe {
+            if is_overunsafe {
                 let function_code = quote! {
                     #node
                 };
@@ -103,18 +103,18 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
 
                     checker.visit_block(&method.block);
 
-                    let is_potential_overunsafe = checker.has_overunsafe;
+                    let is_overunsafe = checker.has_overunsafe;
 
                     if checker.has_unsafe {
-                        if is_potential_overunsafe {
-                            *self.total_potential_overunsafe.lock().unwrap() += 1; // 更新 Potential Overunsafe 案例数量
+                        if is_overunsafe {
+                            *self.total_overunsafe.lock().unwrap() += 1; // 更新Overunsafe 案例数量
                         }
                     
         
                     }
                     
                     // 只在符合潜在overunsafe标准时才打印详细信息
-                    if is_potential_overunsafe {
+                    if is_overunsafe {
                         let method_code = quote! {
                             #method
                         };
@@ -162,16 +162,25 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             self.has_unsafe = true;
 
             let num_stmts = unsafe_block.block.stmts.len();
-            let has_complex_structure = unsafe_block.block.stmts.iter().any(|stmt| {
-                matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
-            });
 
-            // Check for `set_len` function within unsafe blocks
-            let contains_set_len = unsafe_block.block.stmts.iter().any(|stmt| {
+            // Check for `set_len`, `ptr::copy`, or `ptr::copy_nonoverlapping` within unsafe blocks
+            let contains_overunsafe_fn = unsafe_block.block.stmts.iter().any(|stmt| {
                 if let Stmt::Expr(expr, _) = stmt {
                     match expr {
+                        // Method calls like set_len, get_unchecked, etc.
                         Expr::MethodCall(method_call) => {
-                            method_call.method.to_string() == "set_len"
+                            let method_name = method_call.method.to_string();
+                            method_name == "set_len" ||
+                            method_name == "get_unchecked" || method_name == "get_unchecked_mut"
+                        },
+                        // Path checks for libc::strlen, CString::from_vec_unchecked, etc.
+                        Expr::Path(path) => {
+                            let path_ident = path.path.segments.last().unwrap().ident.to_string();
+                            path_ident == "copy" || path_ident == "copy_nonoverlapping" ||
+                            path_ident == "from_vec_unchecked" ||
+                            path_ident == "strlen" ||
+                            path_ident == "from_utf8_unchecked" || path_ident == "from_utf8_unchecked_mut" ||
+                            path_ident == "from_u32_unchecked"
                         },
                         _ => false,
                     }
@@ -180,12 +189,12 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 }
             });
 
-            // If set_len is found, mark the function as "overunsafe"
-            if contains_set_len {
+            // If `set_len`, `ptr::copy`, or `ptr::copy_nonoverlapping`.... is found, mark the function as "overunsafe"
+            if contains_overunsafe_fn {
                 self.has_overunsafe = true; // Mark this unsafe block as overunsafe
 
                 let output = format!(
-                    "Unsafe block with set_len detected in function: {}, file: {}",
+                    "Overunsafe detected in function: {}, file: {}",
                     self.current_function_name, self.current_file_path
                 );
 
@@ -200,7 +209,6 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             if !self.has_safety_comment {
                 *self.total_no_safety_unsafe_blocks.lock().unwrap() += 1; 
             }
-
 
             let output = format!(
                 "Checking unsafe block with {} statements, overunsafe: {}, function: {}, file: {}",
@@ -236,7 +244,7 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
 }
 
 
-fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_potential_overunsafe: &Arc<Mutex<usize>>, necessary_unsafe: &Arc<Mutex<usize>>) -> Result<()> {
+fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_overunsafe: &Arc<Mutex<usize>>) -> Result<()> {
     let source_code = fs::read_to_string(file_path)?;
     let parsed_file = parse_file(&source_code)?;
 
@@ -246,14 +254,14 @@ fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashS
         total_functions,
         total_unsafe_blocks,
         total_no_safety_unsafe_blocks,
-        total_potential_overunsafe,
+        total_overunsafe,
     };
 
     visitor.visit_file(&parsed_file);
     Ok(())
 }
 
-fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_potential_overunsafe: &Arc<Mutex<usize>>, necessary_unsafe: &Arc<Mutex<usize>>) -> Result<()> {
+fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_overunsafe: &Arc<Mutex<usize>>) -> Result<()> {
     let paths: Vec<_> = fs::read_dir(dir_path)?
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
@@ -261,7 +269,7 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(St
 
     paths.iter().for_each(|path| {
         if path.is_dir() {
-            if let Err(e) = process_directory(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks, total_potential_overunsafe, necessary_unsafe) {
+            if let Err(e) = process_directory(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks, total_overunsafe) {
                 eprintln!("Failed to process directory {}: {}", path.display(), e);
             }
         } else if path.extension().map_or(false, |ext| ext == "rs") {
@@ -274,7 +282,7 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(St
                 log.flush().expect("Failed to flush log file");
             }
 
-            if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks, total_potential_overunsafe, necessary_unsafe) {
+            if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks, total_overunsafe) {
                 eprintln!("Failed to scan file {}: {}", path.display(), e);
             }
         }
@@ -312,15 +320,14 @@ fn main() -> Result<()> {
     let total_functions = Arc::new(Mutex::new(0));
     let total_unsafe_blocks = Arc::new(Mutex::new(0));
     let total_no_safety_unsafe_blocks = Arc::new(Mutex::new(0));
-    let total_potential_overunsafe = Arc::new(Mutex::new(0)); // 新增
-    let necessary_unsafe = Arc::new(Mutex::new(0)); // 新增
+    let total_overunsafe = Arc::new(Mutex::new(0)); // 新增
 
-    process_directory(crate_dir, &outputted_functions, &total_functions, &total_unsafe_blocks, &total_no_safety_unsafe_blocks, &total_potential_overunsafe, &necessary_unsafe)?;
+    process_directory(crate_dir, &outputted_functions, &total_functions, &total_unsafe_blocks, &total_no_safety_unsafe_blocks, &total_overunsafe)?;
 
     let total_functions = *total_functions.lock().unwrap();
     let total_unsafe_blocks = *total_unsafe_blocks.lock().unwrap();
     let total_no_safety_unsafe_blocks = *total_no_safety_unsafe_blocks.lock().unwrap();
-    let total_potential_overunsafe = *total_potential_overunsafe.lock().unwrap();
+    let total_overunsafe = *total_overunsafe.lock().unwrap();
 
     let unsafe_function_ratio = if total_functions > 0 {
         (total_unsafe_blocks as f64 / total_functions as f64) * 100.0
@@ -338,7 +345,7 @@ fn main() -> Result<()> {
         0.0
     };
     let potential_overunsafe_ratio = if total_functions > 0 {
-        (total_potential_overunsafe as f64 / total_functions as f64) * 100.0
+        (total_overunsafe as f64 / total_functions as f64) * 100.0
     } else {
         0.0
     };
@@ -349,7 +356,7 @@ fn main() -> Result<()> {
         writeln!(log_file, "Total functions: {}", total_functions).expect("Failed to write to log file");
         writeln!(log_file, "Total unsafe blocks: {}", total_unsafe_blocks).expect("Failed to write to log file");
         writeln!(log_file, "Total unsafe blocks without SAFETY comment: {}", total_no_safety_unsafe_blocks).expect("Failed to write to log file");
-        writeln!(log_file, "Total Potential Overunsafe function: {}", total_potential_overunsafe).expect("Failed to write to log file"); 
+        writeln!(log_file, "Total Potential Overunsafe function: {}", total_overunsafe).expect("Failed to write to log file"); 
         //writeln!(log_file, "Inner Unsafe function ratio: {:.2}%", unsafe_function_ratio).expect("Failed to write to log file");
         //writeln!(log_file, "Inner Unsafe function Without //SAFETY ratio: {:.2}%", nocommit_unsafe_function_ratio).expect("Failed to write to log file");
         //writeln!(log_file, "Inner Unsafe function Without //SAFETY and total Inner Unsafe function ratio: {:.2}%", nur).expect("Failed to write to log file");

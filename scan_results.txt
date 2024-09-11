@@ -1322,7 +1322,7 @@ Checking unsafe block with 3 statements, overunsafe: false, function: new_from_b
 Checking unsafe block with 1 statements, overunsafe: false, function: nid, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\asn1.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: get_i64, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\asn1.rs
 Processing file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
-Unsafe block with set_len detected in function: encode_block, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
+Overunsafe detected in function: encode_block, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
 Checking unsafe block with 3 statements, overunsafe: true, function: encode_block, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
 Found function with unsafe block in encode_block:
 File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
@@ -1347,7 +1347,7 @@ pub fn encode_block(src: &[u8]) -> String {
 
 
 
-Unsafe block with set_len detected in function: decode_block, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
+Overunsafe detected in function: decode_block, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
 Checking unsafe block with 2 statements, overunsafe: true, function: decode_block, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
 Found function with unsafe block in decode_block:
 File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\base64.rs
@@ -1435,7 +1435,7 @@ Checking unsafe block with 1 statements, overunsafe: false, function: mod_invers
 Checking unsafe block with 1 statements, overunsafe: false, function: gcd, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: is_prime, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: is_prime_fasttest, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
-Unsafe block with set_len detected in function: to_vec, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
+Overunsafe detected in function: to_vec, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 Checking unsafe block with 2 statements, overunsafe: true, function: to_vec, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 Start Line: 818, End Line: 826
@@ -1464,7 +1464,7 @@ pub fn to_vec(&self) -> Vec<u8> {
 
 
 
-Unsafe block with set_len detected in function: to_vec_padded, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
+Overunsafe detected in function: to_vec_padded, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 Checking unsafe block with 2 statements, overunsafe: true, function: to_vec_padded, file: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 File: overunsafe库\存在overunsafe的rust库\rust-openssl-da7f26d59aaa74bb4c6eb9181807d6e56047df44\openssl\src\bn.rs
 Start Line: 851, End Line: 858
@@ -2457,7 +2457,7 @@ Processing file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de5010
 Checking unsafe block with 1 statements, overunsafe: false, function: next, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: next_back, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: new, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Unsafe block with set_len detected in function: from_vec, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: from_vec, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 5 statements, overunsafe: true, function: from_vec, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Start Line: 448, End Line: 470
@@ -2498,7 +2498,7 @@ pub fn from_vec(mut vec: Vec<A::Item>) -> SmallVec<A> {
 Checking unsafe block with 1 statements, overunsafe: false, function: from_buf_and_len, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: triple, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: triple_mut, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Unsafe block with set_len detected in function: drain, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: drain, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 5 statements, overunsafe: true, function: drain, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Start Line: 600, End Line: 613
@@ -2522,7 +2522,7 @@ Checking unsafe block with 2 statements, overunsafe: false, function: truncate, 
 Checking unsafe block with 1 statements, overunsafe: false, function: swap_remove, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 8 statements, overunsafe: false, function: remove, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 7 statements, overunsafe: false, function: insert, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Unsafe block with set_len detected in function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 9 statements, overunsafe: true, function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Start Line: 814, End Line: 856
@@ -2576,7 +2576,7 @@ Checking unsafe block with 4 statements, overunsafe: false, function: into_vec, 
 Checking unsafe block with 3 statements, overunsafe: false, function: into_inner, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: dedup_by, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 3 statements, overunsafe: false, function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Unsafe block with set_len detected in function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 5 statements, overunsafe: true, function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Start Line: 1062, End Line: 1075
@@ -2603,7 +2603,7 @@ Checking unsafe block with 3 statements, overunsafe: false, function: from_elem,
 Checking unsafe block with 2 statements, overunsafe: false, function: deref, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 2 statements, overunsafe: false, function: deref_mut, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 3 statements, overunsafe: false, function: extend, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
-Unsafe block with set_len detected in function: into_iter, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
+Overunsafe detected in function: into_iter, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Checking unsafe block with 3 statements, overunsafe: true, function: into_iter, file: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-smallvec-19de50108d403efaa7cd979eac3bb97a4432fd4b\lib.rs
 Start Line: 1513, End Line: 1524
@@ -2627,7 +2627,7 @@ Checking unsafe block with 1 statements, overunsafe: false, function: next, file
 Checking unsafe block with 1 statements, overunsafe: false, function: next_back, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: from_vec, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: from_buf_and_len, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
-Unsafe block with set_len detected in function: drain, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Overunsafe detected in function: drain, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 3 statements, overunsafe: true, function: drain, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Start Line: 431, End Line: 440
@@ -2646,7 +2646,7 @@ Checking unsafe block with 1 statements, overunsafe: false, function: truncate, 
 Checking unsafe block with 1 statements, overunsafe: false, function: swap_remove, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 5 statements, overunsafe: false, function: remove, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 4 statements, overunsafe: false, function: insert, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
-Unsafe block with set_len detected in function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Overunsafe detected in function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 9 statements, overunsafe: true, function: insert_many, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Start Line: 543, End Line: 585
@@ -2695,7 +2695,7 @@ pub fn insert_many<I: iter::IntoIterator<Item = A::Item>>(
 Checking unsafe block with 3 statements, overunsafe: false, function: into_inner, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: dedup_by, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 3 statements, overunsafe: false, function: from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
-Unsafe block with set_len detected in function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Overunsafe detected in function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 6 statements, overunsafe: true, function: insert_from_slice, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Start Line: 688, End Line: 698
@@ -2720,7 +2720,7 @@ pub fn insert_from_slice(&mut self, index: usize, slice: &[A::Item]) {
 Checking unsafe block with 3 statements, overunsafe: false, function: from_elem, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: deref, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: deref_mut, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
-Unsafe block with set_len detected in function: extend, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Overunsafe detected in function: extend, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 5 statements, overunsafe: true, function: extend, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Start Line: 896, End Line: 920
@@ -2750,7 +2750,7 @@ fn extend<I: iter::IntoIterator<Item = A::Item>>(&mut self, iterable: I) {
 
 
 
-Unsafe block with set_len detected in function: into_iter, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
+Overunsafe detected in function: into_iter, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Checking unsafe block with 3 statements, overunsafe: true, function: into_iter, file: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 File: overunsafe库\存在overunsafe的rust库\rust-stackvector-d0382d5ef903fc96bdcc08c02e36e6dd2eda11a5\src\lib.rs
 Start Line: 1057, End Line: 1068
