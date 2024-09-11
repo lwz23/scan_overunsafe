@@ -227,41 +227,36 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
 fn check_for_overunsafe(stmt: &Stmt) -> bool {
     if let Stmt::Expr(expr, _) = stmt {
         match expr {
-            // Check for method calls like set_len, get_unchecked, etc.
+            // Check method calls like set_len, get_unchecked, etc.
             Expr::MethodCall(method_call) => {
                 let method_name = method_call.method.to_string();
-                let args: Vec<String> = method_call.args.iter()
-                    .map(|arg| quote::quote!(#arg).to_string())
-                    .collect();
-                
-                let call = format!("{}({})", method_name, args.join(", "));
-
-                // Check for specific unsafe methods
-                method_name == "set_len" || 
-                method_name == "get_unchecked" || method_name == "get_unchecked_mut"
+                method_name == "set_len" || method_name == "get_unchecked" || method_name == "get_unchecked_mut"
             },
             // Check for path calls like ptr::copy_nonoverlapping, CString::from_vec_unchecked, etc.
             Expr::Call(call_expr) => {
                 if let Expr::Path(path) = &*call_expr.func {
-                    let func_name = path.path.segments.iter()
+                    let full_path: Vec<String> = path.path.segments.iter()
                         .map(|seg| seg.ident.to_string())
-                        .collect::<Vec<String>>()
-                        .join("::");
-
-                    let args: Vec<String> = call_expr.args.iter()
-                        .map(|arg| quote::quote!(#arg).to_string())
                         .collect();
 
-                    let call = format!("{}({})", func_name, args.join(", "));
+                    if full_path.len() >= 2 {
+                        let module = &full_path[full_path.len() - 2];
+                        let function = &full_path[full_path.len() - 1];
 
-                    // Check for specific unsafe function calls
-                    func_name.contains("ptr::copy_nonoverlapping" ) ||
-                    func_name.contains("ptr::copy")  ||
-                    func_name.contains("from_utf8_unchecked") ||
-                    func_name.contains("from_utf8_unchecked_mut") ||
-                    func_name.contains("char::from_u32_unchecked") ||
-                    func_name.contains("CString::from_vec_unchecked") ||
-                    func_name.contains("libc::strlen") 
+                        // Relaxed matching for specific functions: ptr::copy_nonoverlapping, ptr::copy, etc.
+                        let relaxed_match = (module == "ptr" && (function == "copy_nonoverlapping" || function == "copy")) ||
+                                            function == "from_utf8_unchecked" ||
+                                            function == "from_utf8_unchecked_mut";
+
+                        // Strict full path matching for other functions
+                        let strict_match = full_path == ["char", "from_u32_unchecked"] ||
+                                           full_path == ["CString", "from_vec_unchecked"] ||
+                                           full_path == ["libc", "strlen"];
+
+                        relaxed_match || strict_match
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -276,6 +271,7 @@ fn check_for_overunsafe(stmt: &Stmt) -> bool {
         false
     }
 }
+
 
 
 fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_overunsafe: &Arc<Mutex<usize>>) -> Result<()> {
