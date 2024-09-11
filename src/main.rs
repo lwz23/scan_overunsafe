@@ -41,19 +41,18 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                 has_safety_comment,
                 total_unsafe_blocks: self.total_unsafe_blocks.clone(),
                 total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
-                has_unrelated_logic: false,
             };
 
             checker.visit_block(&node.block);
 
-            let is_potential_overunsafe = (checker.has_large_unsafe || checker.has_unrelated_logic) && !checker.has_safety_comment;
+            let is_potential_overunsafe = checker.has_large_unsafe  && !checker.has_safety_comment;
 
             if checker.has_unsafe {
                 if is_potential_overunsafe {
                     *self.total_potential_overunsafe.lock().unwrap() += 1; // 更新 Potential Overunsafe 案例数量
                 }
             
-                if !checker.has_unrelated_logic && !checker.has_large_unsafe {
+                if  !checker.has_large_unsafe {
                     *self.necessary_unsafe.lock().unwrap() += 1; // 更新必要的unsafe代码块数量
                 }
             }
@@ -104,19 +103,18 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                         has_safety_comment,
                         total_unsafe_blocks: self.total_unsafe_blocks.clone(),
                         total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
-                        has_unrelated_logic: false,
                     };
 
                     checker.visit_block(&method.block);
 
-                    let is_potential_overunsafe = (checker.has_large_unsafe || checker.has_unrelated_logic) && !checker.has_safety_comment;
+                    let is_potential_overunsafe = checker.has_large_unsafe && !checker.has_safety_comment;
 
                     if checker.has_unsafe {
                         if is_potential_overunsafe {
                             *self.total_potential_overunsafe.lock().unwrap() += 1; // 更新 Potential Overunsafe 案例数量
                         }
                     
-                        if !checker.has_unrelated_logic && !checker.has_large_unsafe {
+                        if  !checker.has_large_unsafe {
                             *self.necessary_unsafe.lock().unwrap() += 1; // 更新必要的unsafe代码块数量
                         }
                     }
@@ -162,7 +160,6 @@ struct UnsafeBlockChecker {
     has_safety_comment: bool,
     total_unsafe_blocks: Arc<Mutex<usize>>, 
     total_no_safety_unsafe_blocks: Arc<Mutex<usize>>, 
-    has_unrelated_logic: bool, 
 }
 
 impl<'ast> Visit<'ast> for UnsafeBlockChecker {
@@ -175,54 +172,58 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 matches!(stmt, Stmt::Expr(Expr::If(_) | Expr::While(_) | Expr::ForLoop(_), _))
             });
 
-            // 创建一个集合，用来保存与 unsafe 相关的变量
-            let mut unsafe_context_vars = HashSet::new();
-
-            // 先遍历一次所有语句，找到所有定义的变量
-            for stmt in &unsafe_block.block.stmts {
-                if let Stmt::Local(local) = stmt {
-                    if let Pat::Ident(pat_ident) = &local.pat {
-                        unsafe_context_vars.insert(pat_ident.ident.to_string());
+            // Check for `set_len` function within unsafe blocks
+            let contains_set_len = unsafe_block.block.stmts.iter().any(|stmt| {
+                if let Stmt::Expr(expr, _) = stmt {
+                    match expr {
+                        Expr::MethodCall(method_call) => {
+                            method_call.method.to_string() == "set_len"
+                        },
+                        _ => false,
                     }
+                } else {
+                    false
+                }
+            });
+
+            // If set_len is found, mark the function as "overunsafe"
+            if contains_set_len {
+                self.has_large_unsafe = true; // Mark this unsafe block as overunsafe
+
+                let output = format!(
+                    "Unsafe block with set_len detected in function: {}, file: {}",
+                    self.current_function_name, self.current_file_path
+                );
+
+                {
+                    let mut log_file = LOG_FILE.lock().unwrap();
+                    writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                    log_file.flush().expect("Failed to flush log file");
                 }
             }
 
-            // 检查是否有与 unsafe 操作不相关的逻辑
-            for stmt in &unsafe_block.block.stmts {
-                if let Stmt::Expr(expr, _) = stmt {
-                    if !is_related_to_unsafe(expr, &unsafe_context_vars) {
-                        self.has_unrelated_logic = true;
-                        break;
-                    }
-                }
+            *self.total_unsafe_blocks.lock().unwrap() += 1; 
+            if !self.has_safety_comment {
+                *self.total_no_safety_unsafe_blocks.lock().unwrap() += 1; 
+            }
+
+            // Original behavior continues here
+            if num_stmts >= 5 || has_complex_structure {
+                self.has_large_unsafe = true;
             }
 
             let output = format!(
-                "-----------------------------------------------------------------\n\
-                Checking unsafe block with {} statements, With_large_unsafe: {}, Unrelated Logic: {}, With_SAFETY_comment: {}, Name: {},  File: {}\nPotential Overunsafe：{}\n",
+                "Checking unsafe block with {} statements, large unsafe: {}, function: {}, file: {}",
                 num_stmts,
                 self.has_large_unsafe,
-                self.has_unrelated_logic,
-                self.has_safety_comment,
                 self.current_function_name,
-                self.current_file_path,
-                (self.has_large_unsafe || self.has_unrelated_logic) && !self.has_safety_comment,
+                self.current_file_path
             );
 
             {
                 let mut log_file = LOG_FILE.lock().unwrap();
                 writeln!(log_file, "{}", output).expect("Failed to write to log file");
                 log_file.flush().expect("Failed to flush log file");
-            }
-
-            // 判断是否为 large unsafe block
-            if num_stmts >= 5 || has_complex_structure {
-                self.has_large_unsafe = true;
-            }
-
-            *self.total_unsafe_blocks.lock().unwrap() += 1; 
-            if !self.has_safety_comment {
-                *self.total_no_safety_unsafe_blocks.lock().unwrap() += 1; 
             }
         }
         visit::visit_expr(self, node);
@@ -241,52 +242,6 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             Stmt::Expr(expr, _) => self.visit_expr(expr),
             Stmt::Macro(mac) => self.visit_macro(&mac.mac),
         }
-    }
-}
-
-fn is_related_to_unsafe(expr: &Expr, unsafe_context_vars: &HashSet<String>) -> bool {
-    match expr {
-        Expr::Call(_) | Expr::MethodCall(_) | Expr::Unsafe(_) => true,
-        Expr::Path(ref path) => {
-            if let Some(ident) = path.path.get_ident() {
-                return unsafe_context_vars.contains(ident.to_string().as_str());
-            }
-            false
-        }
-        Expr::Assign(assign) => {
-            if let Expr::Path(ref path) = *assign.left {
-                if let Some(ident) = path.path.get_ident() {
-                    // 检查赋值操作是否影响unsafe上下文变量
-                    return unsafe_context_vars.contains(ident.to_string().as_str()) ||
-                           is_related_to_unsafe(&assign.right, unsafe_context_vars);
-                }
-            }
-            is_related_to_unsafe(&assign.right, unsafe_context_vars)
-        }
-        Expr::Binary(binary) => {
-            is_related_to_unsafe(&binary.left, unsafe_context_vars) ||
-            is_related_to_unsafe(&binary.right, unsafe_context_vars)
-        }
-        Expr::Unary(unary) => {
-            is_related_to_unsafe(&unary.expr, unsafe_context_vars)
-        }
-        Expr::If(expr_if) => {
-            is_related_to_unsafe(&expr_if.cond, unsafe_context_vars) ||
-            expr_if.then_branch.stmts.iter().any(|stmt| match stmt {
-                Stmt::Expr(expr, _) => is_related_to_unsafe(expr, unsafe_context_vars),
-                _ => false,
-            }) ||
-            expr_if.else_branch.as_ref().map_or(false, |(_, else_expr)| {
-                is_related_to_unsafe(else_expr, unsafe_context_vars)
-            })
-        }
-        Expr::Loop(expr_loop) => {
-            expr_loop.body.stmts.iter().any(|stmt| match stmt {
-                Stmt::Expr(expr, _) => is_related_to_unsafe(expr, unsafe_context_vars),
-                _ => false,
-            })
-        }
-        _ => false,
     }
 }
 
