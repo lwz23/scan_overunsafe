@@ -894,6 +894,7 @@ impl<A: Array> iter::FromIterator<A::Item> for StackVec<A> {
 
 impl<A: Array> Extend<A::Item> for StackVec<A> {
     fn extend<I: iter::IntoIterator<Item=A::Item>>(&mut self, iterable: I) {
+        //CVE-2021-29939&RUSTSEC-2021-0048
         let mut iter = iterable.into_iter();
         let (lower_bound, upper_bound) = iter.size_hint();
         let upper_bound = upper_bound.expect("iterable must provide upper bound.");

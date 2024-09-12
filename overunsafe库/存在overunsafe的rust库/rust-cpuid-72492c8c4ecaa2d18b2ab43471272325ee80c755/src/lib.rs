@@ -594,6 +594,7 @@ pub struct VendorInfo {
 impl VendorInfo {
     /// Return vendor identification as human readable string.
     pub fn as_string<'a>(&'a self) -> &'a str {
+        //RUSTSEC-2021-0089
         unsafe {
             let brand_string_start = self as *const VendorInfo as *const u8;
             let slice = slice::from_raw_parts(brand_string_start, 3 * 4);
@@ -4034,6 +4035,7 @@ pub struct SoCVendorBrand {
 
 impl SoCVendorBrand {
     pub fn as_string<'a>(&'a self) -> &'a str {
+        //RUSTSEC-2021-0089
         unsafe {
             let brand_string_start = self as *const SoCVendorBrand as *const u8;
             let slice =

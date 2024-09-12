@@ -643,6 +643,7 @@ impl<A: Array> SmallVec<A> {
     /// Re-allocate to set the capacity to `max(new_cap, inline_size())`.
     ///
     /// Panics if `new_cap` is less than the vector's length.
+    /// RUSTSEC-2019-0009与RUSTSEC-2019-0012
     pub fn grow(&mut self, new_cap: usize) {
         unsafe {
             let (ptr, &mut len, cap) = self.triple_mut();
@@ -812,6 +813,7 @@ impl<A: Array> SmallVec<A> {
     /// Insert multiple elements at position `index`, shifting all following elements toward the
     /// back.
     pub fn insert_many<I: IntoIterator<Item=A::Item>>(&mut self, index: usize, iterable: I) {
+        //RUSTSEC-2021-0003
         let iter = iterable.into_iter();
         if index == self.len() {
             return self.extend(iter);

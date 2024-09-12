@@ -157,19 +157,28 @@ struct UnsafeBlockChecker {
 }
 
 impl<'ast> Visit<'ast> for UnsafeBlockChecker {
+    fn visit_stmt(&mut self, stmt: &'ast Stmt) {
+        if let Stmt::Expr(expr, _) = stmt {
+            self.visit_expr(expr);  // 递归访问表达式
+            if check_for_overunsafe(stmt) {
+                self.has_overunsafe = true;  // 如果检测到 overunsafe，标记为 true
+            }
+        } else {
+            visit::visit_stmt(self, stmt);  // 使用默认处理方式
+        }
+    }
+
     fn visit_expr(&mut self, node: &'ast Expr) {
         if let Expr::Unsafe(unsafe_block) = node {
             self.has_unsafe = true;
-
             let num_stmts = unsafe_block.block.stmts.len();
 
-            // Check for overunsafe functions in unsafe blocks
+            // 检查不安全块内是否包含 overunsafe 调用
             let contains_overunsafe_fn = unsafe_block.block.stmts.iter().any(|stmt| {
-                // Traverse each statement within the unsafe block
+                self.visit_stmt(stmt);
                 check_for_overunsafe(stmt)
             });
 
-            // If any overunsafe function is found, mark the function as "overunsafe"
             if contains_overunsafe_fn {
                 self.has_overunsafe = true;
 
@@ -177,7 +186,6 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                     "Overunsafe detected in function: {}, file: {}",
                     self.current_function_name, self.current_file_path
                 );
-
                 {
                     let mut log_file = LOG_FILE.lock().unwrap();
                     writeln!(log_file, "{}", output).expect("Failed to write to log file");
@@ -203,67 +211,60 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 writeln!(log_file, "{}", output).expect("Failed to write to log file");
                 log_file.flush().expect("Failed to flush log file");
             }
+
+            // 递归检查不安全块中的语句
+            self.visit_block(&unsafe_block.block);
+        } else {
+            visit::visit_expr(self, node);  // 处理其他表达式类型
         }
-        visit::visit_expr(self, node);
     }
 
     fn visit_block(&mut self, block: &'ast Block) {
         for stmt in &block.stmts {
-            self.visit_stmt(stmt);
-        }
-    }
-
-    fn visit_stmt(&mut self, stmt: &'ast Stmt) {
-        match stmt {
-            Stmt::Local(local) => self.visit_local(local),
-            Stmt::Item(item) => self.visit_item(item),
-            Stmt::Expr(expr, _) => self.visit_expr(expr),
-            Stmt::Macro(mac) => self.visit_macro(&mac.mac),
+            self.visit_stmt(stmt);  // 递归处理块中的语句
         }
     }
 }
 
-
 fn check_for_overunsafe(stmt: &Stmt) -> bool {
     if let Stmt::Expr(expr, _) = stmt {
         match expr {
-            // Check method calls like set_len, get_unchecked, etc.
+            // 检查方法调用，如 set_len、get_unchecked 等
             Expr::MethodCall(method_call) => {
                 let method_name = method_call.method.to_string();
+
+                // 检查 set_len、get_unchecked 和其他方法调用
                 method_name == "set_len" || method_name == "get_unchecked" || method_name == "get_unchecked_mut"
             },
-            // Check for path calls like ptr::copy_nonoverlapping, CString::from_vec_unchecked, etc.
+            // 检查函数调用，如 ptr::copy_nonoverlapping, from_utf8_unchecked 等
             Expr::Call(call_expr) => {
                 if let Expr::Path(path) = &*call_expr.func {
                     let full_path: Vec<String> = path.path.segments.iter()
                         .map(|seg| seg.ident.to_string())
                         .collect();
 
-                    if full_path.len() >= 2 {
-                        let module = &full_path[full_path.len() - 2];
-                        let function = &full_path[full_path.len() - 1];
+                    // 轻度匹配：检查 ptr::copy_nonoverlapping, ptr::copy, from_utf8_unchecked 等
+                    let relaxed_match = (full_path == ["ptr", "copy_nonoverlapping"] || full_path == ["ptr", "copy"])
+                        || full_path.last().map_or(false, |f| f == "from_utf8_unchecked" || f == "from_utf8_unchecked_mut" || f == "from_vec_unchecked");
 
-                        // Relaxed matching for specific functions: ptr::copy_nonoverlapping, ptr::copy, etc.
-                        let relaxed_match = (module == "ptr" && (function == "copy_nonoverlapping" || function == "copy")) ||
-                                            function == "from_utf8_unchecked" ||
-                                            function == "from_utf8_unchecked_mut";
-
-                        // Strict full path matching for other functions
-                        let strict_match = full_path == ["char", "from_u32_unchecked"] ||
-                                           full_path == ["CString", "from_vec_unchecked"] ||
-                                           full_path == ["libc", "strlen"];
-
-                        relaxed_match || strict_match
-                    } else {
-                        false
+                    if relaxed_match {
+                        return true;
                     }
-                } else {
-                    false
+
+                    // 严格匹配：检查 libc::strlen 等其他函数
+                    let strict_match = full_path == ["libc", "strlen"]
+                        || full_path == ["char", "from_u32_unchecked"]
+                        || full_path == ["CString", "from_vec_unchecked"];
+
+                    if strict_match {
+                        return true;
+                    }
                 }
+                false
             },
-            // Recursively check within blocks
+            // 递归处理块中的语句
             Expr::Block(block_expr) => {
-                block_expr.block.stmts.iter().any(|stmt| check_for_overunsafe(stmt))
+                block_expr.block.stmts.iter().any(|stmt| check_for_overunsafe(stmt))  // 递归处理块中的语句
             },
             _ => false,
         }

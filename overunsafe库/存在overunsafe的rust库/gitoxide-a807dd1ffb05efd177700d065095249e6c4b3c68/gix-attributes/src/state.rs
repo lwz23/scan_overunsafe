@@ -17,6 +17,7 @@ pub struct ValueRef<'a>(#[cfg_attr(feature = "serde", serde(borrow))] KStringRef
 impl<'a> ValueRef<'a> {
     /// Keep `input` as our value.
     pub fn from_bytes(input: &'a [u8]) -> Self {
+        //RUSTSEC-2024-0359
         Self(KStringRef::from_ref(
             // SAFETY: our API makes accessing that value as `str` impossible, so illformed UTF8 is never exposed as such.
             #[allow(unsafe_code)]
