@@ -345,7 +345,7 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
 
 
 fn main() -> Result<()> {
-    let crate_dir = r"overunsafe库\存在overunsafe的rust库";
+    let crate_dir = r"overunsafe库\当前流行的rust库";
 
     let outputted_functions = Arc::new(Mutex::new(HashSet::<(String, String)>::new()));
     let total_functions = Arc::new(Mutex::new(0));
