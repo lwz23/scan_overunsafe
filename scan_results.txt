@@ -886,16 +886,7 @@ Checking unsafe block with 1 statements, overunsafe: false, function: spawn_non_
 Checking unsafe block with 4 statements, overunsafe: false, function: spawn_non_existent, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\bundle.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: spawn, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\bundle.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: init_info, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\bundle.rs
-File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\bundle.rs
-Start Line: 1093, End Line: 1095
-/// # Safety
-/// A `BundleInfo` with the given `BundleId` must have been initialized for this instance of `Bundles`.
-pub(crate) unsafe fn get_unchecked(&self, id: BundleId) -> &BundleInfo {
-    self.bundle_infos.get_unchecked(id.0)
-}
-
-
-
+Overunsafe detected in function: get_unchecked, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\bundle.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: initialize_dynamic_bundle, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\bundle.rs
 Processing file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\change_detection.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: from_tick_cells, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\change_detection.rs
@@ -1361,7 +1352,6 @@ Checking unsafe block with 1 statements, overunsafe: false, function: get_change
 Checking unsafe block with 1 statements, overunsafe: false, function: remove_and_forget, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\sparse_set.rs
 Overunsafe detected in function: get_or_insert_with, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\sparse_set.rs
 Checking unsafe block with 1 statements, overunsafe: true, function: get_or_insert_with, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\sparse_set.rs
-Overunsafe detected in function: get_or_insert_with, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\sparse_set.rs
 Checking unsafe block with 1 statements, overunsafe: true, function: get_or_insert_with, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\sparse_set.rs
 File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\sparse_set.rs
 Start Line: 508, End Line: 522
@@ -1400,22 +1390,7 @@ pub fn get_data(&self, row: TableRow) -> Option<Ptr<'_>> {
 
 
 
-File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
-Start Line: 449, End Line: 452
-/// Fetches a read-only reference to the data at `row`. Unlike [`Column::get`] this does not
-/// do any bounds checking.
-///
-/// # Safety
-/// - `row` must be within the range `[0, self.len())`.
-/// - no other mutable reference to the data of the same row can exist at the same time
-#[inline]
-pub unsafe fn get_data_unchecked(&self, row: TableRow) -> Ptr<'_> {
-    debug_assert!(row.as_usize() < self.data.len());
-    self.data.get_unchecked(row.as_usize())
-}
-
-
-
+Overunsafe detected in function: get_data_unchecked, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
 Overunsafe detected in function: get_data_mut, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
 Checking unsafe block with 1 statements, overunsafe: true, function: get_data_mut, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
 File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
@@ -1431,95 +1406,12 @@ pub fn get_data_mut(&mut self, row: TableRow) -> Option<PtrMut<'_>> {
 
 
 
-File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
-Start Line: 473, End Line: 476
-/// Fetches a mutable reference to the data at `row`. Unlike [`Column::get_data_mut`] this does not
-/// do any bounds checking.
-///
-/// # Safety
-/// - index must be in-bounds
-/// - no other reference to the data of the same row can exist at the same time
-#[inline]
-pub(crate) unsafe fn get_data_unchecked_mut(&mut self, row: TableRow) -> PtrMut<'_> {
-    debug_assert!(row.as_usize() < self.data.len());
-    self.data.get_unchecked_mut(row.as_usize())
-}
-
-
-
+Overunsafe detected in function: get_data_unchecked_mut, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: get_ticks, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
-File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
-Start Line: 521, End Line: 524
-/// Fetches the "added" change detection tick for the value at `row`. Unlike [`Column::get_added_tick`]
-/// this function does not do any bounds checking.
-///
-/// # Safety
-/// `row` must be within the range `[0, self.len())`.
-#[inline]
-pub unsafe fn get_added_tick_unchecked(&self, row: TableRow) -> &UnsafeCell<Tick> {
-    debug_assert!(row.as_usize() < self.added_ticks.len());
-    self.added_ticks.get_unchecked(row.as_usize())
-}
-
-
-
-File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
-Start Line: 532, End Line: 535
-/// Fetches the "changed" change detection tick for the value at `row`. Unlike [`Column::get_changed_tick`]
-/// this function does not do any bounds checking.
-///
-/// # Safety
-/// `row` must be within the range `[0, self.len())`.
-#[inline]
-pub unsafe fn get_changed_tick_unchecked(&self, row: TableRow) -> &UnsafeCell<Tick> {
-    debug_assert!(row.as_usize() < self.changed_ticks.len());
-    self.changed_ticks.get_unchecked(row.as_usize())
-}
-
-
-
-File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
-Start Line: 573, End Line: 579
-/// Fetches the calling location that last changed the value at `row`.
-///
-/// Unlike [`Column::get_changed_by`] this function does not do any bounds checking.
-///
-/// # Safety
-/// `row` must be within the range `[0, self.len())`.
-#[inline]
-#[cfg(feature = "track_change_detection")]
-pub unsafe fn get_changed_by_unchecked(
-    &self,
-    row: TableRow,
-) -> &UnsafeCell<&'static Location<'static>> {
-    debug_assert!(row.as_usize() < self.changed_by.len());
-    self.changed_by.get_unchecked(row.as_usize())
-}
-
-
-
-File: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
-Start Line: 832, End Line: 844
-/// Allocates space for a new entity
-///
-/// # Safety
-/// the allocated row must be written to immediately with valid values in each column
-pub(crate) unsafe fn allocate(&mut self, entity: Entity) -> TableRow {
-    self.reserve(1);
-    let index = self.entities.len();
-    self.entities.push(entity);
-    for column in self.columns.values_mut() {
-        column.data.set_len(self.entities.len());
-        column.added_ticks.push(UnsafeCell::new(Tick::new(0)));
-        column.changed_ticks.push(UnsafeCell::new(Tick::new(0)));
-        #[cfg(feature = "track_change_detection")]
-        column.changed_by.push(UnsafeCell::new(Location::caller()));
-    }
-    TableRow::from_usize(index)
-}
-
-
-
+Overunsafe detected in function: get_added_tick_unchecked, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
+Overunsafe detected in function: get_changed_tick_unchecked, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
+Overunsafe detected in function: get_changed_by_unchecked, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
+Overunsafe detected in function: allocate, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\storage\table.rs
 Processing file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\system\adapter_system.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: run_unsafe, file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\system\adapter_system.rs
 Processing file: overunsafe库\当前流行的rust库\bevy-main\bevy-main\crates\bevy_ecs\src\system\builder.rs
@@ -4591,6 +4483,7 @@ fn drop(&mut self) {
 
 
 
+Overunsafe detected in function: insert_tail, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 2 statements, overunsafe: true, function: insert_tail, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Found function with unsafe block in insert_tail:
 File: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
@@ -4627,6 +4520,7 @@ where
 
 
 
+Overunsafe detected in function: insert_head, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 1 statements, overunsafe: true, function: insert_head, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Found function with unsafe block in insert_head:
 File: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
@@ -4818,11 +4712,8 @@ Checking unsafe block with 1 statements, overunsafe: false, function: choose_piv
 Checking unsafe block with 1 statements, overunsafe: false, function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Overunsafe detected in function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 2 statements, overunsafe: true, function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
-Overunsafe detected in function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 6 statements, overunsafe: true, function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
-Overunsafe detected in function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 2 statements, overunsafe: true, function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
-Overunsafe detected in function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 6 statements, overunsafe: true, function: merge, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Found function with unsafe block in merge:
 File: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
@@ -4964,67 +4855,7 @@ where
 
 
 
-Found function with unsafe block in merge_recurse:
-File: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
-Start Line: 1435, End Line: 1504
-/// Recursively merges pre-sorted chunks inside `v`.
-///
-/// Chunks of `v` are stored in `chunks` as intervals (inclusive left and exclusive right bound).
-/// Argument `buf` is an auxiliary buffer that will be used during the procedure.
-/// If `into_buf` is true, the result will be stored into `buf`, otherwise it will be in `v`.
-///
-/// # Safety
-///
-/// The number of chunks must be positive and they must be adjacent: the right bound of each chunk
-/// must equal the left bound of the following chunk.
-///
-/// The buffer must be at least as long as `v`.
-unsafe fn merge_recurse<T, F>(
-    v: *mut T,
-    buf: *mut T,
-    chunks: &[(usize, usize)],
-    into_buf: bool,
-    is_less: &F,
-)
-where
-    T: Send,
-    F: Fn(&T, &T) -> bool + Sync,
-{
-    let len = chunks.len();
-    debug_assert!(len > 0);
-    if len == 1 {
-        if into_buf {
-            let (start, end) = chunks[0];
-            let src = v.add(start);
-            let dest = buf.add(start);
-            ptr::copy_nonoverlapping(src, dest, end - start);
-        }
-        return;
-    }
-    let (start, _) = chunks[0];
-    let (mid, _) = chunks[len / 2];
-    let (_, end) = chunks[len - 1];
-    let (left, right) = chunks.split_at(len / 2);
-    let (src, dest) = if into_buf { (v, buf) } else { (buf, v) };
-    let guard = MergeHole {
-        start: src.add(start),
-        end: src.add(end),
-        dest: dest.add(start),
-    };
-    let v = SendPtr(v);
-    let buf = SendPtr(buf);
-    rayon_core::join(
-        move || merge_recurse(v.get(), buf.get(), left, !into_buf, is_less),
-        move || merge_recurse(v.get(), buf.get(), right, !into_buf, is_less),
-    );
-    mem::forget(guard);
-    let src_left = slice::from_raw_parts_mut(src.add(start), mid - start);
-    let src_right = slice::from_raw_parts_mut(src.add(mid), end - mid);
-    par_merge(src_left, src_right, dest.add(start), is_less);
-}
-
-
-
+Overunsafe detected in function: merge_recurse, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: par_mergesort, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 2 statements, overunsafe: false, function: par_mergesort, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: par_mergesort, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\slice\sort.rs
@@ -5035,7 +4866,6 @@ Processing file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\
 Processing file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\vec.rs
 Overunsafe detected in function: drop, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\vec.rs
 Checking unsafe block with 1 statements, overunsafe: true, function: drop, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\vec.rs
-Overunsafe detected in function: drop, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\vec.rs
 Checking unsafe block with 5 statements, overunsafe: true, function: drop, file: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\vec.rs
 File: overunsafe库\当前流行的rust库\rayon-main\rayon-main\src\vec.rs
 Start Line: 153, End Line: 174
@@ -6597,79 +6427,7 @@ Processing file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\
 Processing file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\dir_builder.rs
 Processing file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\file\tests.rs
 Processing file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\file.rs
-File: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\file.rs
-Start Line: 385, End Line: 427
-/// Truncates or extends the underlying file, updating the size of this file to become size.
-///
-/// If the size is less than the current file's size, then the file will be
-/// shrunk. If it is greater than the current file's size, then the file
-/// will be extended to size and have all of the intermediate data filled in
-/// with 0s.
-///
-/// # Errors
-///
-/// This function will return an error if the file is not opened for
-/// writing.
-///
-/// # Examples
-///
-/// ```no_run
-/// use tokio::fs::File;
-/// use tokio::io::AsyncWriteExt;
-///
-/// # async fn dox() -> std::io::Result<()> {
-/// let mut file = File::create("foo.txt").await?;
-/// file.write_all(b"hello, world!").await?;
-/// file.set_len(10).await?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// The [`write_all`] method is defined on the [`AsyncWriteExt`] trait.
-///
-/// [`write_all`]: fn@crate::io::AsyncWriteExt::write_all
-/// [`AsyncWriteExt`]: trait@crate::io::AsyncWriteExt
-pub async fn set_len(&self, size: u64) -> io::Result<()> {
-    let mut inner = self.inner.lock().await;
-    inner.complete_inflight().await;
-    let mut buf = match inner.state {
-        State::Idle(ref mut buf_cell) => buf_cell.take().unwrap(),
-        _ => unreachable!(),
-    };
-    let seek = if !buf.is_empty() {
-        Some(SeekFrom::Current(buf.discard_read()))
-    } else {
-        None
-    };
-    let std = self.std.clone();
-    inner.state = State::Busy(
-        spawn_blocking(move || {
-            let res = if let Some(seek) = seek {
-                (&*std).seek(seek).and_then(|_| std.set_len(size))
-            } else {
-                std.set_len(size)
-            }
-                .map(|()| 0);
-            (Operation::Seek(res), buf)
-        }),
-    );
-    let (op, buf) = match inner.state {
-        State::Idle(_) => unreachable!(),
-        State::Busy(ref mut rx) => rx.await?,
-    };
-    inner.state = State::Idle(Some(buf));
-    match op {
-        Operation::Seek(res) => {
-            res.map(|pos| {
-                inner.pos = pos;
-            })
-        }
-        _ => unreachable!(),
-    }
-}
-
-
-
+Overunsafe detected in function: set_len, file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\file.rs
 Checking unsafe block with 1 statements, overunsafe: false, function: as_fd, file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\file.rs
 Processing file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\hard_link.rs
 Processing file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\fs\metadata.rs
@@ -7343,7 +7101,6 @@ pub fn get_mut(&mut self) -> Option<&mut T> {
 
 Overunsafe detected in function: get_or_init, file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\sync\once_cell.rs
 Checking unsafe block with 1 statements, overunsafe: true, function: get_or_init, file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\sync\once_cell.rs
-Overunsafe detected in function: get_or_init, file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\sync\once_cell.rs
 Checking unsafe block with 1 statements, overunsafe: true, function: get_or_init, file: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\sync\once_cell.rs
 File: overunsafe库\当前流行的rust库\tokio-master\tokio-master\tokio\src\sync\once_cell.rs
 Start Line: 346, End Line: 381
@@ -8613,5 +8370,5 @@ Processing file: overunsafe库\当前流行的rust库\yew-master\yew-master\tool
 Total functions: 46346
 Total unsafe blocks: 1185
 Total unsafe blocks without SAFETY comment: 426
-Total Potential Overunsafe function: 42
-Potential Overunsafe function ratio: 0.09%
+Total Potential Overunsafe function: 51
+Potential Overunsafe function ratio: 0.11%

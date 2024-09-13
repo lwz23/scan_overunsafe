@@ -3,10 +3,15 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
 use std::sync::{Arc, Mutex};
 use anyhow::Result;
-use syn::Pat;
 use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file, Attribute, Expr, Block, Stmt};
 use quote::quote;
 use regex::Regex;
+
+/// 全局计数器
+lazy_static::lazy_static! {
+    static ref TOTAL_OVERUNSAFE: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));  // 记录 Potential Overunsafe 案例数量
+    static ref LOG_FILE: Mutex<File> = Mutex::new(File::create("scan_results.txt").expect("Failed to create log file"));
+}
 
 /// Struct to visit functions and methods in the Rust code.
 struct FunctionVisitor<'a> {
@@ -15,7 +20,6 @@ struct FunctionVisitor<'a> {
     total_functions: &'a Arc<Mutex<usize>>,  // 记录函数总数
     total_unsafe_blocks: &'a Arc<Mutex<usize>>, // 记录 unsafe 代码块总数
     total_no_safety_unsafe_blocks: &'a Arc<Mutex<usize>>, // 记录没有 SAFETY 注释的 unsafe 代码块数量
-    total_overunsafe: &'a Arc<Mutex<usize>>, // 记录 Potential Overunsafe 案例数量
 }
 
 impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
@@ -23,8 +27,9 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
         let function_name = node.sig.ident.to_string();
         let unique_key = (function_name.clone(), self.file_path.to_string());
 
-        *self.total_functions.lock().unwrap() += 1; // 记录总函数数
+        *self.total_functions.lock().unwrap() += 1;  // 记录总函数数
 
+        // 确保我们只处理非测试函数并且没有重复处理相同函数
         if !self.is_test_function(&node.attrs)
             && !self.outputted_functions.lock().unwrap().contains(&unique_key)
         {
@@ -44,27 +49,16 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
 
             checker.visit_block(&node.block);
 
-            let is_overunsafe = checker.has_overunsafe;
-
-            if checker.has_unsafe {
-                if is_overunsafe {
-                    *self.total_overunsafe.lock().unwrap() += 1; // 更新 Potential Overunsafe 案例数量
-                }
-               
-            }
-            
-
-            // 只在符合潜在overunsafe标准时才打印详细信息
-            if is_overunsafe {
-                let function_code = quote! {
-                    #node
-                };
+            // 如果检测到 overunsafe，打印详细信息
+            if checker.has_unsafe && checker.has_overunsafe {
+                let function_code = quote! { #node };
                 let formatted_code = prettyplease::unparse(&syn::parse_quote!(#function_code));
                 let output = format!(
                     "Found function with unsafe block in {}:\nFile: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
                     function_name, self.file_path, start_line, end_line, formatted_code
                 );
 
+                // 写入日志
                 {
                     let mut log_file = LOG_FILE.lock().unwrap();
                     writeln!(log_file, "{}", output).expect("Failed to write to log file");
@@ -82,8 +76,9 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                 let method_name = method.sig.ident.to_string();
                 let unique_key = (method_name.clone(), self.file_path.to_string());
 
-                *self.total_functions.lock().unwrap() += 1; // 记录总函数数
+                *self.total_functions.lock().unwrap() += 1;  // 记录总函数数
 
+                // 确保我们只处理非测试方法并且没有重复处理相同方法
                 if !self.is_test_function(&method.attrs)
                     && !self.outputted_functions.lock().unwrap().contains(&unique_key)
                 {
@@ -103,27 +98,16 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
 
                     checker.visit_block(&method.block);
 
-                    let is_overunsafe = checker.has_overunsafe;
-
-                    if checker.has_unsafe {
-                        if is_overunsafe {
-                            *self.total_overunsafe.lock().unwrap() += 1; // 更新Overunsafe 案例数量
-                        }
-                    
-        
-                    }
-                    
-                    // 只在符合潜在overunsafe标准时才打印详细信息
-                    if is_overunsafe {
-                        let method_code = quote! {
-                            #method
-                        };
+                    // 如果检测到 overunsafe，打印详细信息
+                    if checker.has_unsafe && checker.has_overunsafe {
+                        let method_code = quote! { #method };
                         let formatted_code = prettyplease::unparse(&syn::parse_quote!(#method_code));
                         let output = format!(
                             "File: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
                             self.file_path, start_line, end_line, formatted_code
                         );
 
+                        // 写入日志
                         {
                             let mut log_file = LOG_FILE.lock().unwrap();
                             writeln!(log_file, "{}", output).expect("Failed to write to log file");
@@ -135,7 +119,7 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                 }
             }
         }
-        visit::visit_item_impl(self, node);
+        visit::visit_item_impl(self, node);  // 继续递归访问其他实现项
     }
 }
 
@@ -161,7 +145,7 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
         if let Stmt::Expr(expr, _) = stmt {
             self.visit_expr(expr);  // 递归访问表达式
             if check_for_overunsafe(stmt) {
-                self.has_overunsafe = true;  // 如果检测到 overunsafe，标记为 true
+                self.mark_overunsafe();  // 调用 mark_overunsafe 方法，记录 Overunsafe 信息并更新计数
             }
         } else {
             visit::visit_stmt(self, stmt);  // 使用默认处理方式
@@ -180,17 +164,7 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             });
 
             if contains_overunsafe_fn {
-                self.has_overunsafe = true;
-
-                let output = format!(
-                    "Overunsafe detected in function: {}, file: {}",
-                    self.current_function_name, self.current_file_path
-                );
-                {
-                    let mut log_file = LOG_FILE.lock().unwrap();
-                    writeln!(log_file, "{}", output).expect("Failed to write to log file");
-                    log_file.flush().expect("Failed to flush log file");
-                }
+                self.mark_overunsafe();  // 调用 mark_overunsafe 方法，记录 Overunsafe 信息
             }
 
             *self.total_unsafe_blocks.lock().unwrap() += 1;
@@ -206,6 +180,7 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
                 self.current_file_path
             );
 
+            // 输出检查结果
             {
                 let mut log_file = LOG_FILE.lock().unwrap();
                 writeln!(log_file, "{}", output).expect("Failed to write to log file");
@@ -226,14 +201,34 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
     }
 }
 
+impl UnsafeBlockChecker {
+    fn mark_overunsafe(&mut self) {
+        if !self.has_overunsafe {
+            self.has_overunsafe = true;  // 标记为 Overunsafe
+
+            // 更新全局计数器
+            *TOTAL_OVERUNSAFE.lock().unwrap() += 1;
+
+            let output = format!(
+                "Overunsafe detected in function: {}, file: {}",
+                self.current_function_name, self.current_file_path
+            );
+
+            {
+                let mut log_file = LOG_FILE.lock().unwrap();
+                writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                log_file.flush().expect("Failed to flush log file");
+            }
+        }
+    }
+}
+
 fn check_for_overunsafe(stmt: &Stmt) -> bool {
     if let Stmt::Expr(expr, _) = stmt {
         match expr {
             // 检查方法调用，如 set_len、get_unchecked 等
             Expr::MethodCall(method_call) => {
                 let method_name = method_call.method.to_string();
-
-                // 检查 set_len、get_unchecked 和其他方法调用
                 method_name == "set_len" || method_name == "get_unchecked" || method_name == "get_unchecked_mut"
             },
             // 检查函数调用，如 ptr::copy_nonoverlapping, from_utf8_unchecked 等
@@ -256,11 +251,10 @@ fn check_for_overunsafe(stmt: &Stmt) -> bool {
                         || full_path == ["char", "from_u32_unchecked"]
                         || full_path == ["CString", "from_vec_unchecked"];
 
-                    if strict_match {
-                        return true;
-                    }
+                    strict_match
+                } else {
+                    false
                 }
-                false
             },
             // 递归处理块中的语句
             Expr::Block(block_expr) => {
@@ -273,9 +267,7 @@ fn check_for_overunsafe(stmt: &Stmt) -> bool {
     }
 }
 
-
-
-fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_overunsafe: &Arc<Mutex<usize>>) -> Result<()> {
+fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>) -> Result<()> {
     let source_code = fs::read_to_string(file_path)?;
     let parsed_file = parse_file(&source_code)?;
 
@@ -285,14 +277,13 @@ fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashS
         total_functions,
         total_unsafe_blocks,
         total_no_safety_unsafe_blocks,
-        total_overunsafe,
     };
 
     visitor.visit_file(&parsed_file);
     Ok(())
 }
 
-fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>, total_overunsafe: &Arc<Mutex<usize>>) -> Result<()> {
+fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>) -> Result<()> {
     let paths: Vec<_> = fs::read_dir(dir_path)?
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
@@ -300,7 +291,7 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(St
 
     paths.iter().for_each(|path| {
         if path.is_dir() {
-            if let Err(e) = process_directory(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks, total_overunsafe) {
+            if let Err(e) = process_directory(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks) {
                 eprintln!("Failed to process directory {}: {}", path.display(), e);
             }
         } else if path.extension().map_or(false, |ext| ext == "rs") {
@@ -313,17 +304,13 @@ fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(St
                 log.flush().expect("Failed to flush log file");
             }
 
-            if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks, total_overunsafe) {
+            if let Err(e) = scan_for_unsafe_blocks(path.to_str().unwrap(), outputted_functions, total_functions, total_unsafe_blocks, total_no_safety_unsafe_blocks) {
                 eprintln!("Failed to scan file {}: {}", path.display(), e);
             }
         }
     });
 
     Ok(())
-}
-
-lazy_static::lazy_static! {
-    static ref LOG_FILE: Mutex<File> = Mutex::new(File::create("scan_results.txt").expect("Failed to create log file"));
 }
 
 fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> bool {
@@ -343,7 +330,6 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
     false
 }
 
-
 fn main() -> Result<()> {
     let crate_dir = r"overunsafe库\当前流行的rust库";
 
@@ -351,26 +337,25 @@ fn main() -> Result<()> {
     let total_functions = Arc::new(Mutex::new(0));
     let total_unsafe_blocks = Arc::new(Mutex::new(0));
     let total_no_safety_unsafe_blocks = Arc::new(Mutex::new(0));
-    let total_overunsafe = Arc::new(Mutex::new(0)); // 新增
 
-    process_directory(crate_dir, &outputted_functions, &total_functions, &total_unsafe_blocks, &total_no_safety_unsafe_blocks, &total_overunsafe)?;
+    process_directory(crate_dir, &outputted_functions, &total_functions, &total_unsafe_blocks, &total_no_safety_unsafe_blocks)?;
 
     let total_functions = *total_functions.lock().unwrap();
     let total_unsafe_blocks = *total_unsafe_blocks.lock().unwrap();
     let total_no_safety_unsafe_blocks = *total_no_safety_unsafe_blocks.lock().unwrap();
-    let total_overunsafe = *total_overunsafe.lock().unwrap();
+    let total_overunsafe = *TOTAL_OVERUNSAFE.lock().unwrap();  // 从全局计数器获取 total_overunsafe
 
-    let unsafe_function_ratio = if total_functions > 0 {
+    let _unsafe_function_ratio = if total_functions > 0 {
         (total_unsafe_blocks as f64 / total_functions as f64) * 100.0
     } else {
         0.0
     };
-    let nocommit_unsafe_function_ratio = if total_functions > 0 {
+    let _nocommit_unsafe_function_ratio = if total_functions > 0 {
         (total_no_safety_unsafe_blocks as f64 / total_functions as f64) * 100.0
     } else {
         0.0
     };
-    let nur = if total_unsafe_blocks > 0 {
+    let _nur = if total_unsafe_blocks > 0 {
         (total_no_safety_unsafe_blocks as f64 / total_unsafe_blocks as f64) * 100.0
     } else {
         0.0
@@ -388,10 +373,7 @@ fn main() -> Result<()> {
         writeln!(log_file, "Total unsafe blocks: {}", total_unsafe_blocks).expect("Failed to write to log file");
         writeln!(log_file, "Total unsafe blocks without SAFETY comment: {}", total_no_safety_unsafe_blocks).expect("Failed to write to log file");
         writeln!(log_file, "Total Potential Overunsafe function: {}", total_overunsafe).expect("Failed to write to log file"); 
-        //writeln!(log_file, "Inner Unsafe function ratio: {:.2}%", unsafe_function_ratio).expect("Failed to write to log file");
-        //writeln!(log_file, "Inner Unsafe function Without //SAFETY ratio: {:.2}%", nocommit_unsafe_function_ratio).expect("Failed to write to log file");
-        //writeln!(log_file, "Inner Unsafe function Without //SAFETY and total Inner Unsafe function ratio: {:.2}%", nur).expect("Failed to write to log file");
-        writeln!(log_file, "Potential Overunsafe function ratio: {:.2}%", potential_overunsafe_ratio).expect("Failed to write to log file"); // 新增
+        writeln!(log_file, "Potential Overunsafe function ratio: {:.2}%", potential_overunsafe_ratio).expect("Failed to write to log file");
         log_file.flush().expect("Failed to flush log file");
     }
 
