@@ -142,10 +142,12 @@ struct UnsafeBlockChecker {
 
 impl<'ast> Visit<'ast> for UnsafeBlockChecker {
     fn visit_stmt(&mut self, stmt: &'ast Stmt) {
+        let mut state = OverunsafeState::new();  // 初始化状态变量
+
         if let Stmt::Expr(expr, _) = stmt {
             self.visit_expr(expr);  // 递归访问表达式
-            if check_for_overunsafe(stmt) {
-                self.mark_overunsafe();  // 调用 mark_overunsafe 方法，记录 Overunsafe 信息并更新计数
+            if check_for_overunsafe(stmt, &mut state) {
+                self.mark_overunsafe();  // 调用 mark_overunsafe 方法，记录 Overunsafe 信息
             }
         } else {
             visit::visit_stmt(self, stmt);  // 使用默认处理方式
@@ -157,10 +159,12 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             self.has_unsafe = true;
             let num_stmts = unsafe_block.block.stmts.len();
 
+            let mut state = OverunsafeState::new();  // 初始化状态变量
+
             // 检查不安全块内是否包含 overunsafe 调用
             let contains_overunsafe_fn = unsafe_block.block.stmts.iter().any(|stmt| {
                 self.visit_stmt(stmt);
-                check_for_overunsafe(stmt)
+                check_for_overunsafe(stmt, &mut state)
             });
 
             if contains_overunsafe_fn {
@@ -223,13 +227,29 @@ impl UnsafeBlockChecker {
     }
 }
 
-fn check_for_overunsafe(stmt: &Stmt) -> bool {
+fn check_for_overunsafe(stmt: &Stmt, state: &mut OverunsafeState) -> bool {
     if let Stmt::Expr(expr, _) = stmt {
         match expr {
             // 检查方法调用，如 set_len、get_unchecked 等
             Expr::MethodCall(method_call) => {
                 let method_name = method_call.method.to_string();
-                method_name == "set_len" || method_name == "get_unchecked" || method_name == "get_unchecked_mut"
+
+                // 检查 set_len、get_unchecked 和其他方法调用
+                if method_name == "set_len" {
+                    if state.with_capacity_called || state.reserve_called {
+                        // 如果之前调用过 `with_capacity` 或者 `reserve`，标记为 overunsafe
+                        return true;
+                    }
+                }
+
+                // 标记调用了 `with_capacity` 或者 `reserve`
+                if method_name == "with_capacity" {
+                    state.with_capacity_called = true;
+                } else if method_name == "reserve" {
+                    state.reserve_called = true;
+                }
+
+                false
             },
             // 检查函数调用，如 ptr::copy_nonoverlapping, from_utf8_unchecked 等
             Expr::Call(call_expr) => {
@@ -239,7 +259,8 @@ fn check_for_overunsafe(stmt: &Stmt) -> bool {
                         .collect();
 
                     // 轻度匹配：检查 ptr::copy_nonoverlapping, ptr::copy, from_utf8_unchecked 等
-                    let relaxed_match = (full_path == ["ptr", "copy_nonoverlapping"] || full_path == ["ptr", "copy"])
+                    // WARNING: LWZ这里添加上了ptr::write，为了可以扫描出RUSTSEC-2021-0048
+                    let relaxed_match = (full_path == ["ptr", "copy_nonoverlapping"] || full_path == ["ptr", "copy"] || full_path == ["ptr", "write"])
                         || full_path.last().map_or(false, |f| f == "from_utf8_unchecked" || f == "from_utf8_unchecked_mut" || f == "from_vec_unchecked");
 
                     if relaxed_match {
@@ -258,12 +279,27 @@ fn check_for_overunsafe(stmt: &Stmt) -> bool {
             },
             // 递归处理块中的语句
             Expr::Block(block_expr) => {
-                block_expr.block.stmts.iter().any(|stmt| check_for_overunsafe(stmt))  // 递归处理块中的语句
+                block_expr.block.stmts.iter().any(|stmt| check_for_overunsafe(stmt, state))  // 递归处理块中的语句
             },
             _ => false,
         }
     } else {
         false
+    }
+}
+
+// 追踪状态的结构体
+struct OverunsafeState {
+    with_capacity_called: bool,
+    reserve_called: bool,
+}
+
+impl OverunsafeState {
+    fn new() -> Self {
+        OverunsafeState {
+            with_capacity_called: false,
+            reserve_called: false,
+        }
     }
 }
 
@@ -331,7 +367,7 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
 }
 
 fn main() -> Result<()> {
-    let crate_dir = r"overunsafe库\当前流行的rust库";
+    let crate_dir = r"overunsafe库\存在overunsafe的rust库";
 
     let outputted_functions = Arc::new(Mutex::new(HashSet::<(String, String)>::new()));
     let total_functions = Arc::new(Mutex::new(0));
