@@ -26,9 +26,9 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
     fn visit_item_fn(&mut self, node: &'ast ItemFn) {
         let function_name = node.sig.ident.to_string();
         let unique_key = (function_name.clone(), self.file_path.to_string());
-
+    
         *self.total_functions.lock().unwrap() += 1;  // 记录总函数数
-
+    
         // 确保我们只处理非测试函数并且没有重复处理相同函数
         if !self.is_test_function(&node.attrs)
             && !self.outputted_functions.lock().unwrap().contains(&unique_key)
@@ -36,48 +36,52 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
             let start_line = node.sig.ident.span().start().line;
             let end_line = node.block.brace_token.span.close().end().line;
             let has_safety_comment = scan_safety_comments(self.file_path, start_line, end_line);
-
-            let mut checker = UnsafeBlockChecker {
-                has_overunsafe: false,
-                has_unsafe: false,
-                current_function_name: function_name.clone(),
-                current_file_path: self.file_path.to_string(),
-                has_safety_comment,
-                total_unsafe_blocks: self.total_unsafe_blocks.clone(),
-                total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
-            };
-
-            checker.visit_block(&node.block);
-
-            // 如果检测到 overunsafe，打印详细信息
-            if checker.has_unsafe && checker.has_overunsafe {
-                let function_code = quote! { #node };
-                let formatted_code = prettyplease::unparse(&syn::parse_quote!(#function_code));
-                let output = format!(
-                    "Found function with unsafe block in {}:\nFile: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
-                    function_name, self.file_path, start_line, end_line, formatted_code
-                );
-
-                // 写入日志
-                {
-                    let mut log_file = LOG_FILE.lock().unwrap();
-                    writeln!(log_file, "{}", output).expect("Failed to write to log file");
-                    log_file.flush().expect("Failed to flush log file");
+    
+            // 如果函数本身是 unsafe 的，不再标记为 overunsafe
+            if node.sig.unsafety.is_none() {
+                let mut checker = UnsafeBlockChecker {
+                    has_overunsafe: false,
+                    has_unsafe: false,
+                    current_function_name: function_name.clone(),
+                    current_file_path: self.file_path.to_string(),
+                    has_safety_comment,
+                    total_unsafe_blocks: self.total_unsafe_blocks.clone(),
+                    total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
+                };
+    
+                checker.visit_block(&node.block);
+    
+                // 如果检测到 overunsafe，打印详细信息
+                if checker.has_unsafe && checker.has_overunsafe {
+                    let function_code = quote! { #node };
+                    let formatted_code = prettyplease::unparse(&syn::parse_quote!(#function_code));
+                    let output = format!(
+                        "Found function with unsafe block in {}:\nFile: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
+                        function_name, self.file_path, start_line, end_line, formatted_code
+                    );
+    
+                    // 写入日志
+                    {
+                        let mut log_file = LOG_FILE.lock().unwrap();
+                        writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                        log_file.flush().expect("Failed to flush log file");
+                    }
                 }
+    
+                self.outputted_functions.lock().unwrap().insert(unique_key);
             }
-
-            self.outputted_functions.lock().unwrap().insert(unique_key);
         }
     }
+    
 
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
         for item in &node.items {
             if let ImplItem::Fn(method) = item {
                 let method_name = method.sig.ident.to_string();
                 let unique_key = (method_name.clone(), self.file_path.to_string());
-
+    
                 *self.total_functions.lock().unwrap() += 1;  // 记录总函数数
-
+    
                 // 确保我们只处理非测试方法并且没有重复处理相同方法
                 if !self.is_test_function(&method.attrs)
                     && !self.outputted_functions.lock().unwrap().contains(&unique_key)
@@ -85,42 +89,46 @@ impl<'a, 'ast> Visit<'ast> for FunctionVisitor<'a> {
                     let start_line = method.sig.ident.span().start().line;
                     let end_line = method.block.brace_token.span.close().end().line;
                     let has_safety_comment = scan_safety_comments(self.file_path, start_line, end_line);
-
-                    let mut checker = UnsafeBlockChecker {
-                        has_overunsafe: false,
-                        has_unsafe: false,
-                        current_function_name: method_name.clone(),
-                        current_file_path: self.file_path.to_string(),
-                        has_safety_comment,
-                        total_unsafe_blocks: self.total_unsafe_blocks.clone(),
-                        total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
-                    };
-
-                    checker.visit_block(&method.block);
-
-                    // 如果检测到 overunsafe，打印详细信息
-                    if checker.has_unsafe && checker.has_overunsafe {
-                        let method_code = quote! { #method };
-                        let formatted_code = prettyplease::unparse(&syn::parse_quote!(#method_code));
-                        let output = format!(
-                            "File: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
-                            self.file_path, start_line, end_line, formatted_code
-                        );
-
-                        // 写入日志
-                        {
-                            let mut log_file = LOG_FILE.lock().unwrap();
-                            writeln!(log_file, "{}", output).expect("Failed to write to log file");
-                            log_file.flush().expect("Failed to flush log file");
+    
+                    // 如果方法本身是 unsafe 的，不再标记为 overunsafe
+                    if method.sig.unsafety.is_none() {
+                        let mut checker = UnsafeBlockChecker {
+                            has_overunsafe: false,
+                            has_unsafe: false,
+                            current_function_name: method_name.clone(),
+                            current_file_path: self.file_path.to_string(),
+                            has_safety_comment,
+                            total_unsafe_blocks: self.total_unsafe_blocks.clone(),
+                            total_no_safety_unsafe_blocks: self.total_no_safety_unsafe_blocks.clone(),
+                        };
+    
+                        checker.visit_block(&method.block);
+    
+                        // 如果检测到 overunsafe，打印详细信息
+                        if checker.has_unsafe && checker.has_overunsafe {
+                            let method_code = quote! { #method };
+                            let formatted_code = prettyplease::unparse(&syn::parse_quote!(#method_code));
+                            let output = format!(
+                                "Found method with unsafe block in {}:\nFile: {}\nStart Line: {}, End Line: {:?}\n{}\n\n",
+                                method_name, self.file_path, start_line, end_line, formatted_code
+                            );
+    
+                            // 写入日志
+                            {
+                                let mut log_file = LOG_FILE.lock().unwrap();
+                                writeln!(log_file, "{}", output).expect("Failed to write to log file");
+                                log_file.flush().expect("Failed to flush log file");
+                            }
                         }
+    
+                        self.outputted_functions.lock().unwrap().insert(unique_key);
                     }
-
-                    self.outputted_functions.lock().unwrap().insert(unique_key);
                 }
             }
         }
         visit::visit_item_impl(self, node);  // 继续递归访问其他实现项
     }
+    
 }
 
 impl<'a> FunctionVisitor<'a> {
