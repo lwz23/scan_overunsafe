@@ -250,6 +250,10 @@ fn check_for_overunsafe(stmt: &Stmt, state: &mut OverunsafeState) -> bool {
                     }
                 }
 
+                if method_name == "get_unchecked" || method_name == "get_unchecked_mut" {
+                    return true;
+                }
+
                 // 标记调用了 `with_capacity` 或者 `reserve`
                 if method_name == "with_capacity" {
                     state.with_capacity_called = true;
@@ -268,7 +272,7 @@ fn check_for_overunsafe(stmt: &Stmt, state: &mut OverunsafeState) -> bool {
 
                     // 轻度匹配：检查 ptr::copy_nonoverlapping, ptr::copy, from_utf8_unchecked 等
                     // WARNING: LWZ这里添加上了ptr::write，为了可以扫描出RUSTSEC-2021-0048
-                    let relaxed_match = (full_path == ["ptr", "copy_nonoverlapping"] || full_path == ["ptr", "copy"] || full_path == ["ptr", "write"])
+                    let relaxed_match = (full_path == ["ptr", "copy_nonoverlapping"] || full_path == ["ptr", "copy"]|| full_path == ["ptr", "write"])
                         || full_path.last().map_or(false, |f| f == "from_utf8_unchecked" || f == "from_utf8_unchecked_mut" || f == "from_vec_unchecked");
 
                     if relaxed_match {
@@ -375,7 +379,7 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
 }
 
 fn main() -> Result<()> {
-    let crate_dir = r"overunsafe库\存在overunsafe的rust库";
+    let crate_dir = r"overunsafe库\当前流行的rust库";
 
     let outputted_functions = Arc::new(Mutex::new(HashSet::<(String, String)>::new()));
     let total_functions = Arc::new(Mutex::new(0));
