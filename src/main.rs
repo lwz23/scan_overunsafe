@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
 use std::sync::{Arc, Mutex};
 use anyhow::Result;
+use syn::ExprCall;
 use syn::{ItemFn, ImplItem, visit::{self, Visit}, parse_file, Attribute, Expr, Block, Stmt};
 use quote::quote;
 use regex::Regex;
@@ -157,7 +158,12 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             if check_for_overunsafe(stmt, &mut state) {
                 self.mark_overunsafe();  // 调用 mark_overunsafe 方法，记录 Overunsafe 信息
             }
-        } else {
+        } else if let Stmt::Local(let_stmt) = stmt {
+            // 如果是 let 语句，检查赋值表达式
+            if let Some(init_expr) = &let_stmt.init {
+                self.inspect_expression(&init_expr.expr);
+            }
+        }else {
             visit::visit_stmt(self, stmt);  // 使用默认处理方式
         }
     }
@@ -203,6 +209,7 @@ impl<'ast> Visit<'ast> for UnsafeBlockChecker {
             self.visit_block(&unsafe_block.block);
         } else {
             visit::visit_expr(self, node);  // 处理其他表达式类型
+            self.inspect_expression(node); 
         }
     }
 
@@ -231,6 +238,32 @@ impl UnsafeBlockChecker {
                 writeln!(log_file, "{}", output).expect("Failed to write to log file");
                 log_file.flush().expect("Failed to flush log file");
             }
+        }
+    }
+
+    fn inspect_expression(&mut self, expr: &Expr) {
+        match expr {
+            Expr::Call(call_expr) => {
+                // 检查是否是 mem::transmute 或 mem::zeroed
+                if check_for_LWZ_functions(call_expr) {
+                    self.mark_overunsafe();
+                }
+            }
+            Expr::Assign(assign_expr) => {
+                // 递归检查赋值语句中的右侧表达式
+                self.inspect_expression(&assign_expr.right);
+            }
+            Expr::Block(block) => {
+                for stmt in &block.block.stmts {
+                    self.visit_stmt(stmt);
+                }
+            }
+            Expr::Unsafe(unsafe_block) => {
+                for stmt in &unsafe_block.block.stmts {
+                    self.visit_stmt(stmt);
+                }
+            }
+            _ => (),
         }
     }
 }
@@ -271,8 +304,7 @@ fn check_for_overunsafe(stmt: &Stmt, state: &mut OverunsafeState) -> bool {
                         .collect();
 
                     // 轻度匹配：检查 ptr::copy_nonoverlapping, ptr::copy, from_utf8_unchecked 等
-                    // WARNING: LWZ这里添加上了ptr::write，为了可以扫描出RUSTSEC-2021-0048
-                    let relaxed_match = (full_path == ["ptr", "copy_nonoverlapping"] || full_path == ["ptr", "copy"]|| full_path == ["ptr", "write"])
+                    let relaxed_match = (full_path == ["ptr", "copy_nonoverlapping"] || full_path == ["ptr", "copy"])
                         || full_path.last().map_or(false, |f| f == "from_utf8_unchecked" || f == "from_utf8_unchecked_mut" || f == "from_vec_unchecked");
 
                     if relaxed_match {
@@ -331,6 +363,17 @@ fn scan_for_unsafe_blocks(file_path: &str, outputted_functions: &Arc<Mutex<HashS
     Ok(())
 }
 
+fn check_for_LWZ_functions(call_expr: &ExprCall) -> bool {
+    if let Expr::Path(func_path) = &*call_expr.func {
+        let segments: Vec<String> = func_path.path.segments.iter().map(|s| s.ident.to_string()).collect();
+        if segments == ["mem", "zeroed"] || segments == ["mem", "transmute"] || segments == ["ptr", "write"] 
+        || segments == ["ptr", "read_unaligned"]|| segments == ["ptr", "write_unaligned"]|| segments == ["slice", "from_raw_parts"]{
+            return true;
+        }
+    }
+    false
+}
+
 fn process_directory(dir_path: &str, outputted_functions: &Arc<Mutex<HashSet<(String, String)>>>, total_functions: &Arc<Mutex<usize>>, total_unsafe_blocks: &Arc<Mutex<usize>>, total_no_safety_unsafe_blocks: &Arc<Mutex<usize>>) -> Result<()> {
     let paths: Vec<_> = fs::read_dir(dir_path)?
         .filter_map(|entry| entry.ok())
@@ -379,7 +422,7 @@ fn scan_safety_comments(file_path: &str, start_line: usize, end_line: usize) -> 
 }
 
 fn main() -> Result<()> {
-    let crate_dir = r"overunsafe库\当前流行的rust库";
+    let crate_dir = r"overunsafe库\存在overunsafe的rust库";
 
     let outputted_functions = Arc::new(Mutex::new(HashSet::<(String, String)>::new()));
     let total_functions = Arc::new(Mutex::new(0));
